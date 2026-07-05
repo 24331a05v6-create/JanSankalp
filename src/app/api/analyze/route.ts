@@ -143,7 +143,15 @@ Return ONLY valid JSON in this exact format:
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    let supabase;
+    try {
+      supabase = createServerClient();
+    } catch {
+      return NextResponse.json(
+        { error: 'Supabase not configured' },
+        { status: 503 }
+      );
+    }
     await processSubmissions(supabase);
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -154,7 +162,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    let supabase;
+    try {
+      supabase = createServerClient();
+    } catch {
+      return NextResponse.json({ themes: [] });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '20');
 

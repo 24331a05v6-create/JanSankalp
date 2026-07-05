@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
     } else {
       body = await request.json();
     }
+
+    const supabase = getSupabase();
 
     const { data, error } = await supabase
       .from('submissions')
@@ -37,14 +39,21 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ submission: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Submission error:', error);
+    if (error?.message?.includes('supabaseUrl')) {
+      return NextResponse.json(
+        { error: 'Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: 'Failed to submit' }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
     const language = searchParams.get('language');
@@ -69,8 +78,11 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ submissions: data, total: count });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fetch submissions error:', error);
+    if (error?.message?.includes('supabaseUrl')) {
+      return NextResponse.json({ submissions: [], total: 0 });
+    }
     return NextResponse.json({ error: 'Failed to fetch submissions' }, { status: 500 });
   }
 }
