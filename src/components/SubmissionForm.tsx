@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useMessages } from 'next-intl';
 import { Mic, MicOff, MapPin, Image, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { CATEGORIES, LANGUAGES, type Category, type Language } from '@/lib/types';
 
@@ -12,7 +12,16 @@ interface SubmissionFormProps {
 
 export function SubmissionForm({ defaultLocale }: SubmissionFormProps) {
   const t = useTranslations('submit.form');
+  const messages = useMessages();
   const router = useRouter();
+  
+  const categoryLabels: Record<string, string> = {};
+  const cats = (messages as any)?.submit?.form?.categories;
+  if (cats) {
+    Object.keys(cats).forEach(key => {
+      categoryLabels[key] = cats[key];
+    });
+  }
   
   const [category, setCategory] = useState<Category>('other');
   const [language, setLanguage] = useState<Language>(defaultLocale as Language);
@@ -199,7 +208,7 @@ export function SubmissionForm({ defaultLocale }: SubmissionFormProps) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             {CATEGORIES.map((cat) => (
-              <option key={cat.value} value={cat.value}>{t(`categories.${cat.value}`)}</option>
+              <option key={cat.value} value={cat.value}>{categoryLabels[cat.value] || cat.label}</option>
             ))}
           </select>
         </div>

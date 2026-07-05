@@ -1,19 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useMessages } from 'next-intl';
 import { Languages, Mic, Image, Sparkles, ArrowRight, ChevronRight } from 'lucide-react';
-
-const FEATURES = [
-  { icon: Languages, color: '#3B82F6' },
-  { icon: Mic, color: '#10B981' },
-  { icon: Image, color: '#F59E0B' },
-  { icon: Sparkles, color: '#8B5CF6' },
-];
 
 export default function HomePage() {
   const t = useTranslations('home');
   const nav = useTranslations('nav');
+  const messages = useMessages();
+
+  const features = [
+    { key: 'multilingual', icon: Languages, color: '#3B82F6', title: (messages as any)?.home?.features?.multilingual?.title || 'Multilingual Support', desc: (messages as any)?.home?.features?.multilingual?.desc || 'Submit in 12+ Indian languages' },
+    { key: 'voice', icon: Mic, color: '#10B981', title: (messages as any)?.home?.features?.voice?.title || 'Voice Input', desc: (messages as any)?.home?.features?.voice?.desc || 'Speak your request in your language' },
+    { key: 'photo', icon: Image, color: '#F59E0B', title: (messages as any)?.home?.features?.photo?.title || 'Photo & OCR', desc: (messages as any)?.home?.features?.photo?.desc || 'Upload photos of issues' },
+    { key: 'ai', icon: Sparkles, color: '#8B5CF6', title: (messages as any)?.home?.features?.ai?.title || 'AI Prioritization', desc: (messages as any)?.home?.features?.ai?.desc || 'Smart clustering & urgency scoring' },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -59,21 +60,21 @@ export default function HomePage() {
         </div>
 
         <div className="grid md:grid-cols-4 gap-6 mb-20">
-          {(['multilingual', 'voice', 'photo', 'ai'] as const).map((key, i) => {
-            const Icon = FEATURES[i].icon;
+          {features.map((feature, i) => {
+            const Icon = feature.icon;
             return (
-              <div key={key} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div key={feature.key} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: `${FEATURES[i].color}15` }}
+                  style={{ backgroundColor: `${feature.color}15` }}
                 >
-                  <Icon className="w-6 h-6" style={{ color: FEATURES[i].color }} />
+                  <Icon className="w-6 h-6" style={{ color: feature.color }} />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">
-                  {t(`features.${key}.title`)}
+                  {feature.title}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {t(`features.${key}.desc`)}
+                  {feature.desc}
                 </p>
               </div>
             );
