@@ -39,6 +39,7 @@
       "textInput": "Describe the Issue",
       "textPlaceholder": "Describe the problem in your own words...",
       "voiceInput": "Voice Input",
+      "voiceHint": "Tap the button and speak your request",
       "startRecording": "Start Recording",
       "stopRecording": "Stop Recording",
       "listening": "Listening...",

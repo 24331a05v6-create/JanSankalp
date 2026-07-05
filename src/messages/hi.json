@@ -39,6 +39,7 @@
       "textInput": "समस्या का वर्णन करें",
       "textPlaceholder": "अपने शब्दों में समस्या बताएं...",
       "voiceInput": "वॉयस इनपुट",
+      "voiceHint": "बटन दबाएं और अपना अनुरोध बोलें",
       "startRecording": "रिकॉर्डिंग शुरू करें",
       "stopRecording": "रिकॉर्डिंग बंद करें",
       "listening": "सुन रहा है...",

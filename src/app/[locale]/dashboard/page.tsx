@@ -139,9 +139,6 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/en/submit" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-              {nav('submit')}
-            </Link>
             <button
               onClick={runAnalysis}
               disabled={analyzing}
