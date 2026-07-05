@@ -2,9 +2,24 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMessages, useLocale } from 'next-intl';
-import { Mic, MapPin, Image, Send, Loader2, CheckCircle, AlertCircle, Square } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { Mic, MapPin, Image, Send, Loader2, CheckCircle, AlertCircle, Square, ChevronDown } from 'lucide-react';
 import { CATEGORIES, type Category } from '@/lib/types';
+
+const VOICE_LANGS = [
+  { code: 'en-US', label: 'English', native: 'English' },
+  { code: 'hi-IN', label: 'Hindi', native: 'हिन्दी' },
+  { code: 'ta-IN', label: 'Tamil', native: 'தமிழ்' },
+  { code: 'te-IN', label: 'Telugu', native: 'తెలుగు' },
+  { code: 'kn-IN', label: 'Kannada', native: 'ಕನ್ನಡ' },
+  { code: 'ml-IN', label: 'Malayalam', native: 'മലയാളം' },
+  { code: 'mr-IN', label: 'Marathi', native: 'मराठी' },
+  { code: 'gu-IN', label: 'Gujarati', native: 'ગુજરાતી' },
+  { code: 'bn-IN', label: 'Bengali', native: 'বাংলা' },
+  { code: 'or-IN', label: 'Odia', native: 'ଓଡ଼ିଆ' },
+  { code: 'pa-IN', label: 'Punjabi', native: 'ਪੰਜਾਬੀ' },
+  { code: 'as-IN', label: 'Assamese', native: 'অসমীয়া' },
+];
 
 const CAT_LABELS: Record<string, Record<string, string>> = {
   en: { education: 'Education', healthcare: 'Healthcare', roads: 'Roads & Transport', water: 'Water Supply', sanitation: 'Sanitation', electricity: 'Electricity', employment: 'Employment', other: 'Other' },
@@ -21,19 +36,19 @@ const CAT_LABELS: Record<string, Record<string, string>> = {
   as: { education: 'শিক্ষা', healthcare: 'স্বাস্থ্য', roads: 'ৰাস্তা', water: 'পানী', sanitation: 'পৰিশ্ৰৰতা', electricity: 'বিদ্যুৎ', employment: 'কৰ্মসংস্থান', other: 'আন' },
 };
 
-const UI_TEXT: Record<string, { record: string; stop: string; listening: string; hint: string; photo: string; photoHint: string; location: string; submit: string; submitting: string; success: string; clear: string }> = {
-  en: { record: 'Start Recording', stop: 'Stop', listening: 'Listening...', hint: 'Tap and speak your request', photo: 'Upload Photo (optional)', photoHint: 'Photo of the issue', location: 'Use Current Location', submit: 'Submit Request', submitting: 'Submitting...', success: 'Request submitted!', clear: 'Clear' },
-  hi: { record: 'रिकॉर्डिंग शुरू करें', stop: 'बंद करें', listening: 'सुन रहा है...', hint: 'बटन दबाएं और बोलें', photo: 'फोटो अपलोड करें', photoHint: 'समस्या की फोटो', location: 'स्थान लें', submit: 'अनुरोध सबमिट करें', submitting: 'सबमिट हो रहा है...', success: 'अनुरोध सबमिट हो गया!', clear: 'साफ करें' },
-  ta: { record: 'பதிவு தொடங்கு', stop: 'நிறுத்து', listening: 'கேட்கிறது...', hint: 'பொத்தானை அழுத்தி பேசுங்கள்', photo: 'புகைப்படம்', photoHint: 'பிரச்சினையின் புகைப்படம்', location: 'இடம்', submit: 'சமர்ப்பிக்கவும்', submitting: 'சமர்ப்பிக்கிறது...', success: 'சமர்ப்பிக்கப்பட்டது!', clear: 'நீக்கு' },
-  te: { record: 'రికార్డింగ్ ప్రారంభించు', stop: 'ఆపు', listening: 'వింటోంది...', hint: 'బటన్ నొక్కి మాట్లాడండి', photo: 'ఫోటో', photoHint: 'సమస్య యొక్క ఫోటో', location: 'స్థానం', submit: 'సమర్పించు', submitting: 'సమర్పిస్తోంది...', success: 'సమర్పించబడింది!', clear: 'తొలగించు' },
-  kn: { record: 'ರಿಕಾರ್ಡಿಂಗ್ ಪ್ರಾರಂಭಿಸಿ', stop: 'ನಿಲ್ಲಿಸಿ', listening: 'ಕೇಳುತ್ತಿದೆ...', hint: 'ಬಟನ್ ಒತ್ತಿ ಮಾತನಾಡಿ', photo: 'ಫೋಟೋ', photoHint: 'ಸಮಸ್ಯೆಯ ಫೋಟೋ', location: 'ಸ್ಥಳ', submit: 'ಸಮರ್ಪಿಸಿ', submitting: 'ಸಮರ್ಪಿಸುತ್ತಿದೆ...', success: 'ಸಮರ್ಪಿಸಲಾಗಿದೆ!', clear: 'ತೆರವುಗೊಳಿಸಿ' },
-  ml: { record: 'റെക്കോർഡിംഗ് ആരംഭിക്കുക', stop: 'നിർത്തുക', listening: 'കേൾക്കുന്നു...', hint: 'ബട്ടൺ അമർത്തി സംസാരിക്കുക', photo: 'ഫോട്ടോ', photoHint: 'പ്രശ്നത്തിന്റെ ഫോട്ടോ', location: 'സ്ഥലം', submit: 'സമർപ്പിക്കുക', submitting: 'സമർപ്പിക്കുന്നു...', success: 'സമർപ്പിച്ചു!', clear: 'മായ്ക്കുക' },
-  mr: { record: 'रिकॉर्डिंग सुरू करा', stop: 'थांबवा', listening: 'ऐकत आहे...', hint: 'बटण दाबा आणि बोला', photo: 'फोटो', photoHint: 'समस्येचा फोटो', location: 'स्थान', submit: 'सबमिट करा', submitting: 'सबमिट होत आहे...', success: 'सबमिट झाले!', clear: 'साफ करा' },
-  gu: { record: 'રેકોર્ડિંગ શરૂ કરો', stop: 'બંધ કરો', listening: 'સાંભળી રહ્યા છે...', hint: 'બટન દબાવો અને બોલો', photo: 'ફોટો', photoHint: 'સમસ્યાનો ફોટો', location: 'સ્થાન', submit: 'સબમિટ કરો', submitting: 'સબમિટ થઈ રહ્યું છે...', success: 'સબમિટ થયું!', clear: 'સાફ કરો' },
-  bn: { record: 'রেকর্ডিং শুরু করুন', stop: 'থামুন', listening: 'শুনছে...', hint: 'বোতাম চাপুন এবং কথা বলুন', photo: 'ছবি', photoHint: 'সমস্যার ছবি', location: 'অবস্থান', submit: 'জমা দিন', submitting: 'জমা হচ্ছে...', success: 'জমা হয়েছে!', clear: 'পরিষ্কার' },
-  or: { record: 'ରେକର୍ଡିଂ ଆରମ୍ଭ କରନ୍ତୁ', stop: 'ବନ୍ଦ କରନ୍ତୁ', listening: 'ଶୁଣୁଛି...', hint: 'ବଟନ୍ ଦବାନ୍ତୁ ଏବଂ କୁହନ୍ତୁ', photo: 'ଫଟୋ', photoHint: 'ସମସ୍ୟାର ଫଟୋ', location: 'ସ୍ଥାନ', submit: 'ଦାଖଲ କରନ୍ତୁ', submitting: 'ଦାଖଲ ହେଉଛି...', success: 'ଦାଖଲ ହୋଇଛି!', clear: 'ସଫା କରନ୍ତୁ' },
-  pa: { record: 'ਰਿਕਾਰਡਿੰਗ ਸ਼ੁਰੂ ਕਰੋ', stop: 'ਬੰਦ ਕਰੋ', listening: 'ਸੁਣ ਰਿਹਾ ਹੈ...', hint: 'ਬਟਨ ਦਬਾਓ ਅਤੇ ਬੋਲੋ', photo: 'ਫੋਟੋ', photoHint: 'ਸਮੱਸਿਆ ਦੀ ਫੋਟੋ', location: 'ਥਾਂ', submit: 'ਜਮ੍ਹਾ ਕਰੋ', submitting: 'ਜਮ੍ਹਾ ਹੋ ਰਿਹਾ ਹੈ...', success: 'ਜਮ੍ਹਾ ਹੋ ਗਿਆ!', clear: 'ਸਾਫ਼ ਕਰੋ' },
-  as: { record: 'ৰেকৰ্ডিং আৰম্ভ কৰক', stop: 'বন্ধ কৰক', listening: 'শুনিছে...', hint: 'বুটাম টিপক কথা কওক', photo: 'ফটো', photoHint: 'সমস্যাৰ ফটো', location: 'স্থান', submit: 'দাখিল কৰক', submitting: 'দাখিল হৈ আছে...', success: 'দাখিল হৈছে!', clear: 'পৰিষ্কাৰ' },
+const UI_TEXT: Record<string, { record: string; stop: string; listening: string; hint: string; photo: string; photoHint: string; location: string; submit: string; submitting: string; success: string; clear: string; speakIn: string }> = {
+  en: { record: 'Start Recording', stop: 'Stop', listening: 'Listening...', hint: 'Tap and speak your request', photo: 'Upload Photo (optional)', photoHint: 'Photo of the issue', location: 'Use Current Location', submit: 'Submit Request', submitting: 'Submitting...', success: 'Request submitted!', clear: 'Clear', speakIn: 'Speak in' },
+  hi: { record: 'रिकॉर्डिंग शुरू करें', stop: 'बंद करें', listening: 'सुन रहा है...', hint: 'बटन दबाएं और बोलें', photo: 'फोटो अपलोड करें', photoHint: 'समस्या की फोटो', location: 'स्थान लें', submit: 'अनुरोध सबमिट करें', submitting: 'सबमिट हो रहा है...', success: 'अनुरोध सबमिट हो गया!', clear: 'साफ करें', speakIn: 'बोलें' },
+  ta: { record: 'பதிவு தொடங்கு', stop: 'நிறுத்து', listening: 'கேட்கிறது...', hint: 'பொத்தானை அழுத்தி பேசுங்கள்', photo: 'புகைப்படம்', photoHint: 'பிரச்சினையின் புகைப்படம்', location: 'இடம்', submit: 'சமர்ப்பிக்கவும்', submitting: 'சமர்ப்பிக்கிறது...', success: 'சமர்ப்பிக்கப்பட்டது!', clear: 'நீக்கு', speakIn: 'பேசுங்கள்' },
+  te: { record: 'రికార్డింగ్ ప్రారంభించు', stop: 'ఆపు', listening: 'వింటోంది...', hint: 'బటన్ నొక్కి మాట్లాడండి', photo: 'ఫోటో', photoHint: 'సమస్య యొక్క ఫోటో', location: 'స్థానం', submit: 'సమర్పించు', submitting: 'సమర్పిస్తోంది...', success: 'సమర్పించబడింది!', clear: 'తొలగించు', speakIn: 'మాట్లాడండి' },
+  kn: { record: 'ರಿಕಾರ್ಡಿಂಗ್ ಪ್ರಾರಂಭಿಸಿ', stop: 'ನಿಲ್ಲಿಸಿ', listening: 'ಕೇಳುತ್ತಿದೆ...', hint: 'ಬಟನ್ ಒತ್ತಿ ಮಾತನಾಡಿ', photo: 'ಫೋಟೋ', photoHint: 'ಸಮಸ್ಯೆಯ ಫೋಟೋ', location: 'ಸ್ಥಳ', submit: 'ಸಮರ್ಪಿಸಿ', submitting: 'ಸಮರ್ಪಿಸುತ್ತಿದೆ...', success: 'ಸಮರ್ಪಿಸಲಾಗಿದೆ!', clear: 'ತೆರವುಗೊಳಿಸಿ', speakIn: 'ಮಾತನಾಡಿ' },
+  ml: { record: 'റെക്കോർഡിംഗ് ആരംഭിക്കുക', stop: 'നിർത്തുക', listening: 'കേൾക്കുന്നു...', hint: 'ബട്ടൺ അമർത്തി സംസാരിക്കുക', photo: 'ഫോട്ടോ', photoHint: 'പ്രശ്നത്തിന്റെ ഫോട്ടോ', location: 'സ്ഥലം', submit: 'സമർപ്പിക്കുക', submitting: 'സമർപ്പിക്കുന്നു...', success: 'സമർപ്പിച്ചു!', clear: 'മായ്ക്കുക', speakIn: 'സംസാരിക്കുക' },
+  mr: { record: 'रिकॉर्डिंग सुरू करा', stop: 'थांबवा', listening: 'ऐकत आहे...', hint: 'बटण दाबा आणि बोला', photo: 'फोटो', photoHint: 'समस्येचा फोटो', location: 'स्थान', submit: 'सबमिट करा', submitting: 'सबमिट होत आहे...', success: 'सबमिट झाले!', clear: 'साफ करा', speakIn: 'बोला' },
+  gu: { record: 'રેકોર્ડિંગ શરૂ કરો', stop: 'બંધ કરો', listening: 'સાંભળી રહ્યા છે...', hint: 'બટન દબાવો અને બોલો', photo: 'ફોટો', photoHint: 'સમસ્યાનો ફોટો', location: 'સ્થાન', submit: 'સબમિટ કરો', submitting: 'સબમિટ થઈ રહ્યું છે...', success: 'સબમિટ થયું!', clear: 'સાફ કરો', speakIn: 'બોલો' },
+  bn: { record: 'রেকর্ডিং শুরু করুন', stop: 'থামুন', listening: 'শুনছে...', hint: 'বোতাম চাপুন এবং কথা বলুন', photo: 'ছবি', photoHint: 'সমস্যার ছবি', location: 'অবস্থান', submit: 'জমা দিন', submitting: 'জমা হচ্ছে...', success: 'জমা হয়েছে!', clear: 'পরিষ্কার', speakIn: 'কথা বলুন' },
+  or: { record: 'ରେକର୍ଡିଂ ଆରମ୍ଭ କରନ୍ତୁ', stop: 'ବନ୍ଦ କରନ୍ତୁ', listening: 'ଶୁଣୁଛି...', hint: 'ବଟନ୍ ଦବାନ୍ତୁ ଏବଂ କୁହନ୍ତୁ', photo: 'ଫଟୋ', photoHint: 'ସମସ୍ୟାର ଫଟୋ', location: 'ସ୍ଥାନ', submit: 'ଦାଖଲ କରନ୍ତୁ', submitting: 'ଦାଖଲ ହେଉଛି...', success: 'ଦାଖଲ ହୋଇଛି!', clear: 'ସଫା କରନ୍ତୁ', speakIn: 'କୁହନ୍ତୁ' },
+  pa: { record: 'ਰਿਕਾਰਡਿੰਗ ਸ਼ੁਰੂ ਕਰੋ', stop: 'ਬੰਦ ਕਰੋ', listening: 'ਸੁਣ ਰਿਹਾ ਹੈ...', hint: 'ਬਟਨ ਦਬਾਓ ਅਤੇ ਬੋਲੋ', photo: 'ਫੋਟੋ', photoHint: 'ਸਮੱਸਿਆ ਦੀ ਫੋਟੋ', location: 'ਥਾਂ', submit: 'ਜਮ੍ਹਾ ਕਰੋ', submitting: 'ਜਮ੍ਹਾ ਹੋ ਰਿਹਾ ਹੈ...', success: 'ਜਮ੍ਹਾ ਹੋ ਗਿਆ!', clear: 'ਸਾਫ਼ ਕਰੋ', speakIn: 'ਬੋਲੋ' },
+  as: { record: 'ৰেকৰ্ডিং আৰম্ভ কৰক', stop: 'বন্ধ কৰক', listening: 'শুনিছে...', hint: 'বুটাম টিপক কথা কওক', photo: 'ফটো', photoHint: 'সমস্যাৰ ফটো', location: 'স্থান', submit: 'দাখিল কৰক', submitting: 'দাখিল হৈ আছে...', success: 'দাখিল হৈছে!', clear: 'পৰিষ্কাৰ', speakIn: 'কথা কওক' },
 };
 
 export function SubmissionForm() {
@@ -41,6 +56,8 @@ export function SubmissionForm() {
   const router = useRouter();
 
   const [category, setCategory] = useState<Category>('other');
+  const [voiceLang, setVoiceLang] = useState('hi-IN');
+  const [showVoiceLang, setShowVoiceLang] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -57,6 +74,7 @@ export function SubmissionForm() {
 
   const ui = UI_TEXT[locale] || UI_TEXT.en;
   const cats = CAT_LABELS[locale] || CAT_LABELS.en;
+  const currentVoiceLang = VOICE_LANGS.find(l => l.code === voiceLang) || VOICE_LANGS[1];
 
   const startVoiceRecording = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -66,7 +84,7 @@ export function SubmissionForm() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = voiceLang;
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
@@ -95,7 +113,7 @@ export function SubmissionForm() {
     setIsRecording(true);
     setRecordingTime(0);
     timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
-  }, [locale, voiceTranscript]);
+  }, [voiceLang, voiceTranscript]);
 
   const stopVoiceRecording = useCallback(() => {
     if (recognitionRef.current) {
@@ -149,7 +167,7 @@ export function SubmissionForm() {
         voice_transcript: voiceTranscript,
         ocr_text: ocrText,
         category,
-        language: locale,
+        language: voiceLang.split('-')[0],
         source: 'web',
         session_id: crypto.randomUUID(),
       };
@@ -206,8 +224,34 @@ export function SubmissionForm() {
         ))}
       </select>
 
+      {/* Voice Language Selector */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setShowVoiceLang(!showVoiceLang)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-sm font-medium hover:bg-blue-100 transition-colors w-full justify-between"
+        >
+          <span>{ui.speakIn}: <strong>{currentVoiceLang.native}</strong></span>
+          <ChevronDown className={`w-4 h-4 transition-transform ${showVoiceLang ? 'rotate-180' : ''}`} />
+        </button>
+        {showVoiceLang && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-50 grid grid-cols-3 gap-1 max-h-48 overflow-y-auto">
+            {VOICE_LANGS.map(l => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => { setVoiceLang(l.code); setShowVoiceLang(false); }}
+                className={`px-3 py-2 rounded-lg text-sm text-left hover:bg-blue-50 ${voiceLang === l.code ? 'bg-blue-100 font-semibold' : ''}`}
+              >
+                {l.native}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* BIG Voice Button */}
-      <div className="flex flex-col items-center py-6">
+      <div className="flex flex-col items-center py-4">
         <button
           type="button"
           onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
