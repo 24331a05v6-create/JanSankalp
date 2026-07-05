@@ -1,38 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = 'llama-3.1-70b-versatile';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-async function callGroq(prompt: string) {
-  if (!GROQ_API_KEY) {
+async function callGemini(prompt: string) {
+  if (!GEMINI_API_KEY) {
     return fallbackClustering(prompt);
   }
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [
-          { role: 'system', content: 'You are an AI that analyzes citizen development requests. Output only valid JSON.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-      }),
-    });
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    if (!response.ok) throw new Error('Groq API error');
-    const data = await response.json();
-    return JSON.parse(data.choices[0].message.content);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+    return JSON.parse(jsonMatch[0]);
   } catch (error) {
-    console.error('Groq error:', error);
+    console.error('Gemini error:', error);
     return fallbackClustering(prompt);
   }
 }
@@ -41,23 +30,25 @@ function fallbackClustering(prompt: string) {
   const submissions = JSON.parse(prompt.match(/\[[\s\S]*\]/)?.[0] || '[]');
   const themes: Record<string, any[]> = {};
   
-  submissions.forEach((s: any, i: number) => {
+  submissions.forEach((s: any) => {
     const key = s.category || 'other';
     if (!themes[key]) themes[key] = [];
-    themes[key].push({ ...s, index: i });
+    themes[key].push(s);
   });
 
-  return Object.entries(themes).map(([category, items], idx) => ({
-    id: `theme-${idx}`,
-    name: `${category.charAt(0).toUpperCase() + category.slice(1)} Issues`,
-    description: `${items.length} submissions about ${category}`,
-    category,
-    submission_count: items.length,
-    avg_urgency: 3,
-    priority_score: items.length * 3,
-    representative_submissions: items.slice(0, 3).map(s => s.id),
-    urgency_scores: items.map(() => 3),
-  }));
+  return {
+    themes: Object.entries(themes).map(([category, items], idx) => ({
+      id: `theme-${idx}`,
+      name: `${category.charAt(0).toUpperCase() + category.slice(1)} Issues`,
+      description: `${items.length} submissions about ${category}`,
+      category,
+      submission_count: items.length,
+      avg_urgency: 3,
+      priority_score: items.length * 3,
+      representative_submissions: items.slice(0, 3).map((s: any) => s.id),
+      urgency_scores: items.map(() => 3),
+    })),
+  };
 }
 
 async function processSubmissions(supabase: ReturnType<typeof createServerClient>) {
@@ -74,19 +65,45 @@ async function processSubmissions(supabase: ReturnType<typeof createServerClient
     .update({ status: 'processing' })
     .in('id', pending.map(p => p.id));
 
-  const prompt = `Analyze these citizen development requests. Group into themes, score urgency 1-5, calculate priority.
-Return JSON: { themes: [{ id, name, description, category, submission_count, avg_urgency, priority_score, representative_submissions: string[], urgency_scores: number[] }] }
+  const prompt = `You are an AI analyst for an Indian Member of Parliament's constituency office.
 
-Submissions: ${JSON.stringify(pending.map(p => ({
+Analyze these citizen development requests. Group them into meaningful themes based on similarity.
+
+For each theme provide:
+- A concise theme name (max 5 words)
+- A 1-2 sentence description of the core issue
+- Urgency score 1-5 (5 = critical: safety hazard, health emergency, immediate need)
+- Priority score 1-10 (combines: request frequency, urgency, population impact)
+
+Submissions:
+${JSON.stringify(pending.map(p => ({
   id: p.id,
   text: p.text_input || p.voice_transcript || p.ocr_text,
   category: p.category,
   language: p.language,
   lat: p.latitude,
   lng: p.longitude,
-})))}`;
+})), null, 2)}
 
-  const result = await callGroq(prompt);
+Return ONLY valid JSON in this exact format:
+{
+  "themes": [
+    {
+      "name": "Theme Name",
+      "description": "Brief description",
+      "category": "education",
+      "submission_count": 5,
+      "avg_urgency": 4.0,
+      "priority_score": 7.5,
+      "representative_submissions": ["id1", "id2"],
+      "urgency_scores": [4, 5, 3]
+    }
+  ]
+}`;
+
+  const result = await callGemini(prompt);
+
+  if (!result?.themes) return;
 
   for (const theme of result.themes) {
     const { data: newTheme } = await supabase
@@ -104,7 +121,7 @@ Submissions: ${JSON.stringify(pending.map(p => ({
       .single();
 
     if (newTheme) {
-      const themeSubmissions = pending.filter((_, i) => theme.urgency_scores[i] !== undefined);
+      const themeSubmissions = pending.filter((_, i) => theme.urgency_scores?.[i] !== undefined);
       const updates = themeSubmissions.map((sub, idx) => ({
         id: sub.id,
         theme_id: newTheme.id,
