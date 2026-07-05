@@ -37,16 +37,33 @@ export function SubmissionForm({ defaultLocale }: SubmissionFormProps) {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = language === 'hi' ? 'hi-IN' : language === 'ta' ? 'ta-IN' : language === 'te' ? 'te-IN' : 'en-US';
+    
+    const langMap: Record<string, string> = {
+      hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN', kn: 'kn-IN', ml: 'ml-IN',
+      mr: 'mr-IN', gu: 'gu-IN', bn: 'bn-IN', or: 'or-IN', pa: 'pa-IN', as: 'as-IN',
+    };
+    recognition.lang = langMap[language] || 'en-US';
     recognition.interimResults = true;
     recognition.continuous = true;
+    recognition.maxAlternatives = 1;
+
+    let finalTranscript = '';
 
     recognition.onresult = (event: any) => {
-      let transcript = '';
+      let interimTranscript = '';
+      
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        const result = event.results[i];
+        const text = result[0].transcript;
+        
+        if (result.isFinal) {
+          finalTranscript += text + ' ';
+        } else {
+          interimTranscript += text;
+        }
       }
-      setVoiceTranscript(prev => prev + ' ' + transcript);
+      
+      setVoiceTranscript(finalTranscript.trim() + (interimTranscript ? ' ' + interimTranscript : ''));
     };
 
     recognition.onerror = (event: any) => {
