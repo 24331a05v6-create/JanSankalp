@@ -1,0 +1,108 @@
+{
+  "nav": {
+    "submit": "Submit Request",
+    "dashboard": "MP Dashboard",
+    "title": "JanSankalp"
+  },
+  "home": {
+    "hero": {
+      "title": "Voice Your Community's Needs",
+      "subtitle": "Submit development requests via text, voice, or photos. AI analyzes and prioritizes community needs for your MP.",
+      "cta": "Submit a Request"
+    },
+    "features": {
+      "multilingual": {
+        "title": "Multilingual Support",
+        "desc": "Submit in 12+ Indian languages"
+      },
+      "voice": {
+        "title": "Voice Input",
+        "desc": "Speak your request in your language"
+      },
+      "photo": {
+        "title": "Photo & OCR",
+        "desc": "Upload photos of issues, auto-extract text"
+      },
+      "ai": {
+        "title": "AI Prioritization",
+        "desc": "Smart clustering & urgency scoring"
+      }
+    }
+  },
+  "submit": {
+    "title": "Submit Development Request",
+    "subtitle": "Help your MP understand what your community needs most",
+    "form": {
+      "category": "Category",
+      "categoryPlaceholder": "Select a category",
+      "language": "Language",
+      "textInput": "Describe the Issue",
+      "textPlaceholder": "Describe the problem in your own words...",
+      "voiceInput": "Voice Input",
+      "startRecording": "Start Recording",
+      "stopRecording": "Stop Recording",
+      "listening": "Listening...",
+      "photoUpload": "Upload Photo (optional)",
+      "photoHint": "Photo of the issue (road damage, school condition, etc.)",
+      "location": "Location",
+      "useCurrentLocation": "Use Current Location",
+      "locationPlaceholder": "Enter landmark or address",
+      "submit": "Submit Request",
+      "submitting": "Submitting...",
+      "success": "Request submitted successfully!",
+      "error": "Failed to submit. Please try again."
+    },
+    "categories": {
+      "education": "Education",
+      "healthcare": "Healthcare",
+      "roads": "Roads & Transport",
+      "water": "Water Supply",
+      "sanitation": "Sanitation",
+      "electricity": "Electricity",
+      "employment": "Employment",
+      "other": "Other"
+    }
+  },
+  "dashboard": {
+    "title": "MP Dashboard",
+    "subtitle": "AI-prioritized development needs for your constituency",
+    "stats": {
+      "totalSubmissions": "Total Submissions",
+      "activeThemes": "Active Themes",
+      "topPriority": "Top Priority",
+      "coverage": "Area Coverage"
+    },
+    "map": {
+      "title": "Demand Hotspots",
+      "clusterTooltip": "submissions",
+      "legend": "Theme Clusters"
+    },
+    "themes": {
+      "title": "Priority Themes",
+      "urgency": "Urgency",
+      "submissions": "Submissions",
+      "priorityScore": "Priority Score",
+      "viewDetails": "View Details"
+    },
+    "themeDetail": {
+      "title": "Theme Details",
+      "summary": "AI Summary",
+      "sampleSubmissions": "Sample Submissions",
+      "demographics": "Area Demographics",
+      "infrastructureGaps": "Known Infrastructure Gaps",
+      "recommendedActions": "Recommended Actions"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "next": "Next",
+    "previous": "Previous",
+    "language": "Language"
+  }
+}
