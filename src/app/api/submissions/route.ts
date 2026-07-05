@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
+import { addSubmission, getSubmissions } from '@/lib/firebase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,76 +15,53 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     }
 
-    const supabase = getSupabase();
-
-    const { data, error } = await supabase
-      .from('submissions')
-      .insert({
-        text_input: body.text_input || null,
-        voice_transcript: body.voice_transcript || null,
-        photo_url: body.photo_url || null,
-        ocr_text: body.ocr_text || null,
-        latitude: body.latitude || null,
-        longitude: body.longitude || null,
-        location_name: body.location_name || null,
-        category: body.category,
-        language: body.language,
-        source: body.source || 'web',
-        session_id: body.session_id || null,
-        status: 'pending',
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json({ submission: data });
-  } catch (error: any) {
-    console.error('Submission error:', error);
-    const msg = error?.message || '';
-    if (msg.includes('NEXT_PUBLIC_SUPABASE_URL') || msg.includes('supabaseUrl') || msg.includes('supabase')) {
+    if (!body.category || !body.language) {
       return NextResponse.json(
-        { error: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local' },
-        { status: 503 }
+        { error: 'Category and language are required' },
+        { status: 400 }
       );
     }
-    return NextResponse.json({ error: error?.message || 'Failed to submit' }, { status: 500 });
+
+    const submission = await addSubmission({
+      text_input: body.text_input || null,
+      voice_transcript: body.voice_transcript || null,
+      photo_url: body.photo_url || null,
+      ocr_text: body.ocr_text || null,
+      latitude: body.latitude || null,
+      longitude: body.longitude || null,
+      location_name: body.location_name || null,
+      category: body.category,
+      language: body.language,
+      source: body.source || 'web',
+      session_id: body.session_id || null,
+      status: 'pending',
+    });
+
+    return NextResponse.json({ submission });
+  } catch (error: any) {
+    console.error('Submission error:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to submit' },
+      { status: 500 }
+    );
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabase();
     const searchParams = request.nextUrl.searchParams;
-    const category = searchParams.get('category');
-    const language = searchParams.get('language');
-    const status = searchParams.get('status');
-    const theme_id = searchParams.get('theme_id');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
 
-    let query = supabase
-      .from('submissions')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const submissions = await getSubmissions({
+      category: searchParams.get('category') || undefined,
+      language: searchParams.get('language') || undefined,
+      status: searchParams.get('status') || undefined,
+      theme_id: searchParams.get('theme_id') || undefined,
+      limitCount: parseInt(searchParams.get('limit') || '200'),
+    });
 
-    if (category) query = query.eq('category', category);
-    if (language) query = query.eq('language', language);
-    if (status) query = query.eq('status', status);
-    if (theme_id) query = query.eq('theme_id', theme_id);
-
-    const { data, error, count } = await query;
-
-    if (error) throw error;
-
-    return NextResponse.json({ submissions: data, total: count });
+    return NextResponse.json({ submissions, total: submissions.length });
   } catch (error: any) {
     console.error('Fetch submissions error:', error);
-    const msg = error?.message || '';
-    if (msg.includes('NEXT_PUBLIC_SUPABASE_URL') || msg.includes('supabaseUrl') || msg.includes('supabase')) {
-      return NextResponse.json({ submissions: [], total: 0 });
-    }
-    return NextResponse.json({ error: 'Failed to fetch submissions' }, { status: 500 });
+    return NextResponse.json({ submissions: [], total: 0 });
   }
 }

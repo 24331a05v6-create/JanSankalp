@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { getSubmissions, addTheme, getThemes, updateSubmission } from '@/lib/firebase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -38,7 +38,6 @@ function fallbackClustering(prompt: string) {
 
   return {
     themes: Object.entries(themes).map(([category, items], idx) => ({
-      id: `theme-${idx}`,
       name: `${category.charAt(0).toUpperCase() + category.slice(1)} Issues`,
       description: `${items.length} submissions about ${category}`,
       category,
@@ -51,41 +50,36 @@ function fallbackClustering(prompt: string) {
   };
 }
 
-async function processSubmissions(supabase: ReturnType<typeof createServerClient>) {
-  const { data: pending, error } = await supabase
-    .from('submissions')
-    .select('*')
-    .eq('status', 'pending')
-    .limit(100);
+async function processSubmissions() {
+  const pending = await getSubmissions({ status: 'pending', limitCount: 100 });
 
-  if (error || !pending?.length) return;
+  if (!pending.length) return;
 
-  await supabase
-    .from('submissions')
-    .update({ status: 'processing' })
-    .in('id', pending.map(p => p.id));
+  for (const sub of pending) {
+    await updateSubmission(sub.id, { status: 'processing' });
+  }
 
   const prompt = `You are an AI analyst for an Indian Member of Parliament's constituency office.
 
-Analyze these citizen development requests. Group them into meaningful themes based on similarity.
+Analyze these citizen development requests. Group them into meaningful themes.
 
 For each theme provide:
 - A concise theme name (max 5 words)
-- A 1-2 sentence description of the core issue
-- Urgency score 1-5 (5 = critical: safety hazard, health emergency, immediate need)
-- Priority score 1-10 (combines: request frequency, urgency, population impact)
+- A 1-2 sentence description
+- Urgency score 1-5 (5 = critical: safety hazard, health emergency)
+- Priority score 1-10 (frequency + urgency + impact)
 
 Submissions:
 ${JSON.stringify(pending.map(p => ({
   id: p.id,
-  text: p.text_input || p.voice_transcript || p.ocr_text,
+  text: p.text_input || p.voice_transcript || p.ocr_text || '',
   category: p.category,
   language: p.language,
   lat: p.latitude,
   lng: p.longitude,
 })), null, 2)}
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON:
 {
   "themes": [
     {
@@ -106,87 +100,48 @@ Return ONLY valid JSON in this exact format:
   if (!result?.themes) return;
 
   for (const theme of result.themes) {
-    const { data: newTheme } = await supabase
-      .from('themes')
-      .insert({
-        name: theme.name,
-        description: theme.description,
-        category: theme.category,
-        submission_count: theme.submission_count,
-        avg_urgency: theme.avg_urgency,
-        priority_score: theme.priority_score,
-        representative_submissions: theme.representative_submissions,
-      })
-      .select()
-      .single();
+    const newTheme = await addTheme({
+      name: theme.name,
+      description: theme.description,
+      category: theme.category,
+      submission_count: theme.submission_count,
+      avg_urgency: theme.avg_urgency,
+      priority_score: theme.priority_score,
+      representative_submissions: theme.representative_submissions,
+    });
 
-    if (newTheme) {
-      const themeSubmissions = pending.filter((_, i) => theme.urgency_scores?.[i] !== undefined);
-      const updates = themeSubmissions.map((sub, idx) => ({
-        id: sub.id,
+    const themeSubs = pending.filter((_, i) => theme.urgency_scores?.[i] !== undefined);
+    for (let idx = 0; idx < themeSubs.length; idx++) {
+      await updateSubmission(themeSubs[idx].id, {
         theme_id: newTheme.id,
         theme_name: theme.name,
         urgency_score: theme.urgency_scores[idx],
         priority_score: theme.priority_score,
-        status: 'analyzed' as const,
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('submissions')
-          .update(update)
-          .eq('id', update.id);
-      }
+        status: 'analyzed',
+      });
     }
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    let supabase;
-    try {
-      supabase = createServerClient();
-    } catch {
-      return NextResponse.json(
-        { error: 'Supabase not configured' },
-        { status: 503 }
-      );
-    }
-    await processSubmissions(supabase);
+    await processSubmissions();
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Analysis error:', error);
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Analysis failed' }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    let supabase;
-    try {
-      supabase = createServerClient();
-    } catch {
-      return NextResponse.json({ themes: [] });
-    }
-
     const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limitCount = parseInt(searchParams.get('limit') || '20');
 
-    const { data: themes, error } = await supabase
-      .from('themes')
-      .select('*')
-      .order('priority_score', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-
+    const themes = await getThemes(limitCount);
     return NextResponse.json({ themes });
   } catch (error: any) {
     console.error('Themes fetch error:', error);
-    const msg = error?.message || '';
-    if (msg.includes('NEXT_PUBLIC_SUPABASE_URL') || msg.includes('supabaseUrl') || msg.includes('supabase')) {
-      return NextResponse.json({ themes: [] });
-    }
-    return NextResponse.json({ error: 'Failed to fetch themes' }, { status: 500 });
+    return NextResponse.json({ themes: [] });
   }
 }
