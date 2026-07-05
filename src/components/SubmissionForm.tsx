@@ -6,11 +6,6 @@ import { useMessages, useLocale } from 'next-intl';
 import { Mic, MapPin, Image, Send, Loader2, CheckCircle, AlertCircle, Square } from 'lucide-react';
 import { CATEGORIES, type Category } from '@/lib/types';
 
-const LANG_MAP: Record<string, string> = {
-  en: 'en-US', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN', kn: 'kn-IN', ml: 'ml-IN',
-  mr: 'mr-IN', gu: 'gu-IN', bn: 'bn-IN', or: 'or-IN', pa: 'pa-IN', as: 'as-IN',
-};
-
 const CAT_LABELS: Record<string, Record<string, string>> = {
   en: { education: 'Education', healthcare: 'Healthcare', roads: 'Roads & Transport', water: 'Water Supply', sanitation: 'Sanitation', electricity: 'Electricity', employment: 'Employment', other: 'Other' },
   hi: { education: 'शिक्षा', healthcare: 'स्वास्थ्य सेवा', roads: 'सड़कें और परिवहन', water: 'जल आपूर्ति', sanitation: 'स्वच्छता', electricity: 'बिजली', employment: 'रोजगार', other: 'अन्य' },
@@ -71,7 +66,7 @@ export function SubmissionForm() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = LANG_MAP[locale] || 'en-US';
+    recognition.lang = 'en-US';
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
@@ -120,8 +115,7 @@ export function SubmissionForm() {
     setPhotoPreview(preview);
     try {
       const { createWorker } = await import('tesseract.js');
-      const langMap: Record<string, string> = { en: 'eng', hi: 'hin', ta: 'tam', te: 'tel', kn: 'kan', ml: 'mal', mr: 'mar', gu: 'guj', bn: 'ben', or: 'ori', pa: 'pan', as: 'asm' };
-      const worker = await createWorker(langMap[locale] || 'eng');
+      const worker = await createWorker('eng');
       const { data: { text } } = await worker.recognize(preview);
       await worker.terminate();
       setOcrText(text);
