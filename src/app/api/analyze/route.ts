@@ -181,8 +181,12 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ themes });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Themes fetch error:', error);
+    const msg = error?.message || '';
+    if (msg.includes('NEXT_PUBLIC_SUPABASE_URL') || msg.includes('supabaseUrl') || msg.includes('supabase')) {
+      return NextResponse.json({ themes: [] });
+    }
     return NextResponse.json({ error: 'Failed to fetch themes' }, { status: 500 });
   }
 }

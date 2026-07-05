@@ -167,7 +167,11 @@ export function SubmissionForm({ defaultLocale }: SubmissionFormProps) {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Submission failed');
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Submission failed');
+      }
 
       setSubmitStatus('success');
       setTextInput('');
@@ -181,10 +185,10 @@ export function SubmissionForm({ defaultLocale }: SubmissionFormProps) {
         setSubmitStatus('idle');
         router.refresh();
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submit error:', error);
       setSubmitStatus('error');
-      setErrorMessage('Failed to submit. Please try again.');
+      setErrorMessage(error?.message || 'Failed to submit. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

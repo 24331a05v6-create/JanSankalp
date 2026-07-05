@@ -41,13 +41,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ submission: data });
   } catch (error: any) {
     console.error('Submission error:', error);
-    if (error?.message?.includes('supabaseUrl')) {
+    const msg = error?.message || '';
+    if (msg.includes('NEXT_PUBLIC_SUPABASE_URL') || msg.includes('supabaseUrl') || msg.includes('supabase')) {
       return NextResponse.json(
-        { error: 'Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local' },
+        { error: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local' },
         { status: 503 }
       );
     }
-    return NextResponse.json({ error: 'Failed to submit' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to submit' }, { status: 500 });
   }
 }
 
@@ -80,7 +81,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ submissions: data, total: count });
   } catch (error: any) {
     console.error('Fetch submissions error:', error);
-    if (error?.message?.includes('supabaseUrl')) {
+    const msg = error?.message || '';
+    if (msg.includes('NEXT_PUBLIC_SUPABASE_URL') || msg.includes('supabaseUrl') || msg.includes('supabase')) {
       return NextResponse.json({ submissions: [], total: 0 });
     }
     return NextResponse.json({ error: 'Failed to fetch submissions' }, { status: 500 });
