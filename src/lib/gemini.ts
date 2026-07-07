@@ -241,3 +241,75 @@ Return ONLY valid JSON:
 
   return await callGemini(prompt);
 }
+
+// Capability 7: Project Prioritization
+export async function prioritizeProjects(projects: any[], submissions: any[]) {
+  const prompt = `You are an AI development planning advisor for an Indian Member of Parliament's constituency office. The MP has entered several proposed development projects and wants to know which should be prioritized based on actual citizen demand data.
+
+PROPOSED PROJECTS:
+${projects.map((p, i) => `[${i + 1}] Name: "${p.name}" | Category: ${p.category} | Area: ${p.target_area || 'Not specified'} | Cost: ${p.estimated_cost || 'Not specified'}`).join('\n')}
+
+CITIZEN DEMAND DATA (from ${submissions.length} real complaints):
+${JSON.stringify(submissions.map(s => ({
+  category: s.category,
+  text: (s.text_input || s.voice_transcript || s.ai_summary || '').substring(0, 150),
+  priority: s.priority_score || 0,
+  location: s.location_name || s.ai_entities?.location_mentioned || null,
+  department: s.ai_entities?.department || null,
+  severity: s.ai_entities?.severity_keywords || [],
+  affected: s.ai_entities?.affected_people || null,
+})), null, 2)}
+
+For EACH proposed project, analyze:
+1. How many complaints relate to this project's category
+2. Average priority score of related complaints
+3. How many unique locations/areas are affected (hotspots)
+4. How many people are potentially affected
+5. Safety risk level based on severity keywords
+
+Then rank ALL projects from highest to lowest priority.
+
+Respond ONLY with valid JSON:
+{
+  "ranked_projects": [
+    {
+      "rank": 1,
+      "project_name": "Project Name",
+      "category": "roads",
+      "priority_score": 94,
+      "related_complaints": 312,
+      "duplicate_complaints": 45,
+      "avg_priority_score": 7.8,
+      "hotspot_locations": 18,
+      "affected_areas": 12,
+      "responsible_department": "Public Works Department",
+      "reason_for_recommendation": "2-3 sentence explanation",
+      "expected_impact": "Description of expected impact",
+      "citizens_benefited": "50,000+",
+      "urgency": "critical/high/medium/low",
+      "urgency_reason": "Why this urgency level",
+      "suggested_scheme": "Relevant Indian government scheme",
+      "why_this_recommendation": [
+        "High complaint frequency",
+        "High average severity",
+        "Multiple hotspot locations",
+        "Large affected population",
+        "High urgency"
+      ]
+    }
+  ]
+}
+
+Rules:
+- Score projects 0-100 based on complaint frequency, severity, affected population, safety risk, and urgency
+- Prioritize projects with MORE complaints, HIGHER severity, LARGER affected population
+- A project with 300 complaints should rank higher than one with 20 complaints
+- High severity keywords (death, injury, accident, collapse, flood, outbreak) boost priority significantly
+- Always provide at least 3 "why_this_recommendation" reasons
+- Use actual Indian government schemes where applicable (PMGSY for roads, Swachh Bharat for sanitation, etc.)
+- Be specific about departments (e.g., "Municipal Corporation Water Department" not just "Water")
+
+Return ONLY the JSON object.`;
+
+  return await callGemini(prompt);
+}

@@ -5,7 +5,7 @@ import {
   ArrowLeft, Users, Lightbulb, TrendingUp, MapPin,
   RefreshCw, Loader2, Globe, ChevronDown, ChevronRight,
   AlertTriangle, Building2, Clock, FileText, Shield,
-  Search, CheckCircle2, Circle, AlertCircle, Copy, Phone
+  Search, CheckCircle2, Circle, AlertCircle, Copy, Phone, BarChart3
 } from 'lucide-react';
 import { DemandMap } from '@/components/DemandMap';
 import { StatsCard } from '@/components/StatsCard';
@@ -498,6 +498,12 @@ export default function DashboardPage() {
             {stats.ivrCount > 0 && (
               <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: 'rgba(255,255,255,0.2)' }}>{stats.ivrCount}</span>
             )}
+          </Link>
+          <Link href={`/${lang}/dashboard/projects`}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-sm flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: 'white' }}>
+            <BarChart3 className="w-4 h-4" />
+            Project Prioritization
           </Link>
         </div>
 
