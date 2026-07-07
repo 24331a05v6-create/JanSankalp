@@ -5,7 +5,7 @@ import {
   ArrowLeft, Users, Lightbulb, TrendingUp, MapPin,
   RefreshCw, Loader2, Globe, ChevronDown, ChevronRight,
   AlertTriangle, Building2, Clock, FileText, Shield,
-  Search, CheckCircle2, Circle, AlertCircle, Copy, Phone, BarChart3, Layers
+  Search, CheckCircle2, Circle, AlertCircle, Copy, Phone, BarChart3, Layers, Trophy
 } from 'lucide-react';
 import { DemandMap } from '@/components/DemandMap';
 import { StatsCard } from '@/components/StatsCard';
@@ -269,6 +269,7 @@ export default function DashboardPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [merging, setMerging] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [lang, setLang] = useState('en');
@@ -464,11 +465,11 @@ export default function DashboardPage() {
               )}
             </div>
             <ThemeSwitcher />
-            <button onClick={runMerge} disabled={merging}
+            <button onClick={() => { setRefreshing(true); fetchData().finally(() => setRefreshing(false)); }}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-              style={{ background: 'var(--accent-gradient)', color: 'white', opacity: merging ? 0.6 : 1 }}>
-              {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {merging ? t.merging : t.runMerge}
+              style={{ background: 'var(--accent-gradient)', color: 'white', opacity: refreshing ? 0.6 : 1 }}>
+              {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {refreshing ? t.merging : 'Refresh Data'}
             </button>
           </div>
         </div>
@@ -510,6 +511,12 @@ export default function DashboardPage() {
             style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white' }}>
             <Layers className="w-4 h-4" />
             Development Planner
+          </Link>
+          <Link href={`/${lang}/dashboard/evaluator`}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-sm flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: 'white' }}>
+            <Trophy className="w-4 h-4" />
+            Proposal Evaluator
           </Link>
         </div>
 
