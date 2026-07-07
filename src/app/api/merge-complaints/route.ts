@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAllSubmissions, addMergedIssue, deleteAllMergedIssues, type MergedIssue } from '@/lib/firebase';
 
+export const maxDuration = 60;
+
 const STOP_WORDS = new Set([
   'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
   'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
@@ -146,15 +148,11 @@ export async function POST() {
         const allLangs = ['en', 'hi', 'ta', 'te', 'kn', 'ml', 'mr', 'gu', 'bn', 'or', 'pa', 'as'];
         const translations: Record<string, string> = { en: repText };
 
+        // Fill from existing translations in the cluster (free, instant)
         for (const lang of allLangs.filter(l => l !== 'en')) {
-          // Check if any submission already has this translation
           const existingTrans = cluster.find((s: any) => s.allTranslations?.[lang]);
           if (existingTrans) {
             translations[lang] = existingTrans.allTranslations[lang];
-          } else {
-            const translated = await translateViaGoogle(repText, lang);
-            if (translated) translations[lang] = translated;
-            await new Promise(r => setTimeout(r, 150));
           }
         }
 
@@ -187,11 +185,12 @@ export async function POST() {
     // Sort by priority score descending
     mergedIssues.sort((a, b) => b.priority_score - a.priority_score);
 
-    // Save to Firebase
+    // Save to Firebase in parallel batches of 10
     let saved = 0;
-    for (const issue of mergedIssues) {
-      await addMergedIssue(issue);
-      saved++;
+    for (let i = 0; i < mergedIssues.length; i += 10) {
+      const batch = mergedIssues.slice(i, i + 10);
+      await Promise.all(batch.map(issue => addMergedIssue(issue)));
+      saved += batch.length;
     }
 
     console.log(`Saved ${saved} merged issues`);

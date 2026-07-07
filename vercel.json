@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "app/api/merge-complaints/route.ts": {
+      "maxDuration": 60
+    }
+  },
   "headers": [
     {
       "source": "/api/(.*)",
