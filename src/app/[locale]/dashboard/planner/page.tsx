@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  ArrowLeft, BarChart3, TrendingUp, TrendingDown, AlertTriangle,
-  CheckCircle2, MapPin, Building2, Users, FileText, Download,
-  Filter, ChevronDown, ChevronRight, Layers, Zap, Droplets,
-  HeartPulse, GraduationCap, Trash2, Lightbulb, Briefcase, Bus,
-  Home, MoreHorizontal, RefreshCw, Loader2
+  ArrowLeft, TrendingUp, TrendingDown, AlertTriangle,
+  CheckCircle2, MapPin, Building2, FileText, Download,
+  Filter, Layers, Zap, Droplets,
+  HeartPulse, GraduationCap, Trash2, Lightbulb, Briefcase,
+  MoreHorizontal, RefreshCw, Loader2, Info, Clock, Users, IndianRupee
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -65,6 +65,11 @@ interface SectorData {
   unresolvedPercent: number;
   needScore: number;
   trend: 'up' | 'down' | 'stable';
+  estimatedCitizens: number;
+  suggestedBudget: string;
+  budgetReasons: string[];
+  whyRanked: string[];
+  resolvedPercent: number;
 }
 
 const SECTOR_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
@@ -78,23 +83,22 @@ const SECTOR_CONFIG: Record<string, { label: string; icon: any; color: string }>
   other: { label: 'Other Sectors', icon: MoreHorizontal, color: '#64748b' },
 };
 
-const SECTOR_KEYWORDS: Record<string, string[]> = {
-  roads: ['road', 'transport', 'traffic', 'highway', 'pothole', 'bridge', 'street', 'bus', 'metro', 'flyover'],
-  water: ['water', 'pipe', 'supply', 'drinking', 'borewell', 'tanker', 'flood', 'rain'],
-  healthcare: ['health', 'hospital', 'doctor', 'medicine', 'clinic', 'ambulance', 'pharmacy', 'medical'],
-  education: ['school', 'college', 'education', 'teacher', 'student', 'library', 'university'],
-  sanitation: ['sanitation', 'garbage', 'waste', 'toilet', 'sewage', 'drain', 'clean', 'swachh'],
-  electricity: ['electric', 'power', 'light', 'transformer', 'outage', 'voltage', 'wire', 'meter'],
-  employment: ['employment', 'job', 'work', 'skill', 'unemployment', 'labor', 'factory', 'wage'],
-  other: [],
-};
-
 const PRIORITY_LEVELS = [
-  { min: 7, label: 'Critical', color: '#ef4444' },
-  { min: 5, label: 'High', color: '#f97316' },
-  { min: 3, label: 'Medium', color: '#eab308' },
-  { min: 0, label: 'Low', color: '#22c55e' },
+  { min: 7, label: 'Critical', color: '#ef4444', dot: '🔴', desc: 'Immediate action required, safety risk' },
+  { min: 5, label: 'High', color: '#f97316', dot: '🟠', desc: 'Urgent attention needed within days' },
+  { min: 3, label: 'Medium', color: '#eab308', dot: '🟡', desc: 'Important but not time-critical' },
+  { min: 0, label: 'Low', color: '#22c55e', dot: '🟢', desc: 'Can be scheduled for routine maintenance' },
 ];
+
+const BUDGET_MAP = [
+  { min: 90, budget: '₹3 Crore', label: '3 Crore' },
+  { min: 80, budget: '₹2 Crore', label: '2 Crore' },
+  { min: 70, budget: '₹1 Crore', label: '1 Crore' },
+  { min: 60, budget: '₹50 Lakhs', label: '50 Lakhs' },
+  { min: 0, budget: '₹25 Lakhs', label: '25 Lakhs' },
+];
+
+const POPULATION_PER_LOCATION = 2500;
 
 const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
   en: {
@@ -146,6 +150,21 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     lowestScore: 'Lowest need score',
     mostHotspots: 'Most hotspot clusters identified',
     unresolvedIssues: 'Issues requiring immediate attention',
+    whyRanked: 'Why Ranked',
+    estimatedCitizens: 'Estimated Citizens Affected',
+    estimatedValue: 'Estimated Value',
+    suggestedBudget: 'Suggested Budget',
+    priorityLevels: 'Priority Levels',
+    lastUpdated: 'Last Updated',
+    resolvedOf: 'Resolved',
+    whyReasons: 'Ranking Reasons',
+    budgetReason: 'Budget Rationale',
+    citizensNote: 'Based on affected locations × avg population per location',
+    tooltipNeedScore: 'Composite score (0-100) based on complaint frequency, severity, hotspots, and unresolved ratio',
+    tooltipHotspots: 'Distinct geographic clusters where multiple complaints originate',
+    tooltipResolved: 'Percentage of merged issues marked as resolved by the MP',
+    tooltipBudget: 'Suggested allocation based on the Need Score and expected impact',
+    tooltipCitizens: 'Estimated using affected locations × 2,500 avg population per location',
   },
   hi: {
     title: 'विकास योजनाकार',
@@ -196,6 +215,21 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     lowestScore: 'न्यूनतम आवश्यकता स्कोर',
     mostHotspots: 'सर्वाधिक हॉटस्पॉट क्लस्टर',
     unresolvedIssues: 'तत्काल ध्यान देने योग्य मुद्दे',
+    whyRanked: 'क्यों रैंक किया गया',
+    estimatedCitizens: 'अनुमानित प्रभावित नागरिक',
+    estimatedValue: 'अनुमानित मूल्य',
+    suggestedBudget: 'अनुशंसित बजट',
+    priorityLevels: 'प्राथमिकता स्तर',
+    lastUpdated: 'अंतिम अपडेट',
+    resolvedOf: 'हल',
+    whyReasons: 'रैंकिंग कारण',
+    budgetReason: 'बजट कारण',
+    citizensNote: 'प्रभावित स्थानों × औसत जनसंख्या के आधार पर',
+    tooltipNeedScore: 'शिकायत आवृत्ति, गंभीरता, हॉटस्पॉट और अनसुलझी अनुपात पर आधारित संयुक्त स्कोर (0-100)',
+    tooltipHotspots: 'वे भौगोलिक क्लस्टर जहाँ कई शिकायतें आती हैं',
+    tooltipResolved: 'MP द्वारा हल किए गए विलय मुद्दों का प्रतिशत',
+    tooltipBudget: 'आवश्यकता स्कोर और अपेक्षित प्रभाव के आधार पर अनुशंसित आवंटन',
+    tooltipCitizens: 'प्रभावित स्थानों × 2,500 औसत जनसंख्या का उपयोग करके अनुमानित',
   },
   ta: {
     title: 'மேம்பாட்டு திட்டமிடுபவர்',
@@ -246,10 +280,67 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     lowestScore: 'குறைந்த தேவை மதிப்பெண்',
     mostHotspots: 'மிகவும் ஹாட்ஸ்பாட் குழுக்கள்',
     unresolvedIssues: 'உடனடி கவனம் தேவை',
+    whyRanked: 'ஏன் தரவரிசை',
+    estimatedCitizens: 'மதிப்பிடப்பட்ட பாதிக்கப்பட்ட குடிமக்கள்',
+    estimatedValue: 'மதிப்பிடப்பட்ட மதிப்பு',
+    suggestedBudget: 'பரிந்துரைக்கப்பட்ட பட்ஜெட்',
+    priorityLevels: 'முன்னுரிமை நிலைகள்',
+    lastUpdated: 'கடைசி புதுப்பிப்பு',
+    resolvedOf: 'தீர்வு',
+    whyReasons: 'தரவரிசை காரணங்கள்',
+    budgetReason: 'பட்ஜெட் காரணம்',
+    citizensNote: 'பாதிக்கப்பட்ட இடங்கள் × இடம் ஒன்றுக்கு சராசரி மக்கள்தொகையின் அடிப்படையில்',
+    tooltipNeedScore: 'புகார் அதிர்வெண், தீவிரம், ஹாட்ஸ்பாட் மற்றும் தீர்க்கப்படாத விகிதத்தின் அடிப்படையில் கூட்டு மதிப்பெண் (0-100)',
+    tooltipHotspots: 'பல புகார்கள் வரும் புவியியல் குழுக்கள்',
+    tooltipResolved: 'MP மூலம் தீர்க்கப்பட்ட இணைக்கப்பட்ட பிரச்சினைகளின் சதவீதம்',
+    tooltipBudget: 'தேவை மதிப்பெண் மற்றும் எதிர்பார்க்கப்படும் தாக்கத்தின் அடிப்படையில் பரிந்துரைக்கப்பட்ட ஒதுக்கீடு',
+    tooltipCitizens: 'பாதிக்கப்பட்ட இடங்கள் × 2,500 சராசரி மக்கள்தொகையைப் பயன்படுத்தி மதிப்பிடப்பட்டது',
   },
 };
 
 const LANGUAGES = ['en', 'hi', 'ta'] as const;
+
+function AnimatedCounter({ value, duration = 1 }: { value: number; duration?: number }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<number | null>(null);
+
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    if (start === end) { setDisplay(end); return; }
+    const startTime = Date.now();
+    const dur = duration * 1000;
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / dur, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + (end - start) * eased));
+      if (progress < 1) ref.current = requestAnimationFrame(tick);
+    };
+    ref.current = requestAnimationFrame(tick);
+    return () => { if (ref.current) cancelAnimationFrame(ref.current); };
+  }, [value, duration]);
+
+  return <>{display.toLocaleString()}</>;
+}
+
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative inline-flex" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      {children}
+      <AnimatePresence>
+        {show && (
+          <motion.span initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs rounded-lg shadow-xl whitespace-nowrap pointer-events-none"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }}>
+            {text}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
 
 export default function DevelopmentPlannerPage() {
   const [mergedIssues, setMergedIssues] = useState<MergedIssue[]>([]);
@@ -257,6 +348,7 @@ export default function DevelopmentPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState('en');
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterResolved, setFilterResolved] = useState<'all' | 'active' | 'resolved'>('all');
@@ -279,6 +371,7 @@ export default function DevelopmentPlannerPage() {
       const subsData = await submissionsRes.json();
       setMergedIssues(issuesData.merged_issues || []);
       setSubmissions(subsData.submissions || []);
+      setLastUpdated(new Date());
     } catch {
       // silent
     } finally {
@@ -317,11 +410,9 @@ export default function DevelopmentPlannerPage() {
 
   const sectorData = useMemo(() => {
     const totalComplaints = filteredIssues.reduce((sum, i) => sum + i.complaint_count, 0);
-    const totalMerged = filteredIssues.length;
 
     const sectors: SectorData[] = Object.entries(SECTOR_CONFIG).map(([key, config]) => {
       const sectorIssues = filteredIssues.filter(i => i.category === key);
-      const sectorSubs = filteredSubmissions.filter(s => s.category === key);
 
       const totalComp = sectorIssues.reduce((sum, i) => sum + i.complaint_count, 0);
       const mergedCount = sectorIssues.length;
@@ -340,9 +431,13 @@ export default function DevelopmentPlannerPage() {
       });
 
       const unresolved = sectorIssues.filter(i => !i.resolved).reduce((sum, i) => sum + i.complaint_count, 0);
+      const resolvedCount = totalComp - unresolved;
 
       const percent = totalComplaints > 0 ? (totalComp / totalComplaints) * 100 : 0;
       const unresolvedPct = totalComp > 0 ? (unresolved / totalComp) * 100 : 0;
+      const resolvedPct = totalComp > 0 ? 100 - unresolvedPct : 0;
+
+      const estimatedCitizens = locationSet.size * POPULATION_PER_LOCATION;
 
       return {
         key,
@@ -357,16 +452,19 @@ export default function DevelopmentPlannerPage() {
         percentOfTotal: percent,
         unresolvedCount: unresolved,
         unresolvedPercent: unresolvedPct,
+        resolvedPercent: resolvedPct,
         needScore: 0,
         trend: 'stable' as const,
+        estimatedCitizens,
+        suggestedBudget: '',
+        budgetReasons: [],
+        whyRanked: [],
       };
     });
 
-    // Calculate max values for normalization
     const maxComplaints = Math.max(...sectors.map(s => s.totalComplaints), 1);
     const maxHotspots = Math.max(...sectors.map(s => s.hotspotCount), 1);
 
-    // Calculate Need Score
     sectors.forEach(sector => {
       const priorityNorm = (sector.avgPriority / 10) * 100;
       const countNorm = (sector.totalComplaints / maxComplaints) * 100;
@@ -380,23 +478,60 @@ export default function DevelopmentPlannerPage() {
         (unresolvedNorm * 0.20)
       );
 
-      // Trend based on unresolved ratio
       sector.trend = sector.unresolvedPercent > 70 ? 'up' :
         sector.unresolvedPercent < 30 ? 'down' : 'stable';
+
+      const budgetEntry = BUDGET_MAP.find(b => sector.needScore >= b.min);
+      sector.suggestedBudget = budgetEntry?.budget || '₹25 Lakhs';
+
+      sector.budgetReasons = [];
+      if (sector.needScore >= 90) sector.budgetReasons.push('Highest need score in the constituency');
+      else if (sector.needScore >= 70) sector.budgetReasons.push('High need score requiring significant investment');
+      else if (sector.needScore >= 50) sector.budgetReasons.push('Moderate need with room for impactful allocation');
+      else sector.budgetReasons.push('Lower priority but still requires baseline funding');
+      if (sector.estimatedCitizens > 5000) sector.budgetReasons.push(`Large citizen impact: ~${sector.estimatedCitizens.toLocaleString()} people`);
+      if (sector.hotspotCount > 2) sector.budgetReasons.push(`${sector.hotspotCount} geographic hotspots need targeted investment`);
+      if (sector.avgPriority >= 7) sector.budgetReasons.push('Critical severity issues reported');
     });
 
-    // Sort by need score
     sectors.sort((a, b) => b.needScore - a.needScore);
 
-    return { sectors, totalComplaints, totalMerged };
+    sectors.forEach((sector, idx) => {
+      sector.whyRanked = [];
+      if (sector.totalComplaints === Math.max(...sectors.filter(s => s.totalComplaints > 0).map(s => s.totalComplaints))) {
+        sector.whyRanked.push(`Highest complaint count: ${sector.totalComplaints} total complaints`);
+      }
+      if (sector.hotspotCount > 0) {
+        sector.whyRanked.push(`${sector.hotspotCount} hotspot location${sector.hotspotCount > 1 ? 's' : ''} identified`);
+      }
+      if (sector.unresolvedCount > 0) {
+        sector.whyRanked.push(`${sector.unresolvedCount} unresolved complaint${sector.unresolvedCount > 1 ? 's' : ''} requiring attention`);
+      }
+      if (sector.avgPriority > 0) {
+        sector.whyRanked.push(`Average Priority Score: ${sector.avgPriority.toFixed(1)}`);
+      }
+      const priorityLevel = PRIORITY_LEVELS.find(p => sector.avgPriority >= p.min);
+      if (priorityLevel?.label === 'Critical') {
+        sector.whyRanked.push('Critical public service — immediate action needed');
+      } else if (priorityLevel?.label === 'High') {
+        sector.whyRanked.push('High-demand public service with safety concerns');
+      }
+      if (sector.totalComplaints >= maxComplaints * 0.5) {
+        sector.whyRanked.push('High citizen demand across the constituency');
+      }
+      if (sector.whyRanked.length === 0) {
+        sector.whyRanked.push('Consistently high demand across multiple indicators');
+      }
+    });
+
+    return { sectors, totalComplaints, totalMerged: filteredIssues.length };
   }, [filteredIssues, filteredSubmissions]);
 
   const summary = useMemo(() => {
-    const { sectors, totalComplaints } = sectorData;
+    const { sectors } = sectorData;
     const totalResolved = mergedIssues.filter(i => i.resolved).length;
     const totalAll = mergedIssues.length;
     const resolvedPct = totalAll > 0 ? Math.round((totalResolved / totalAll) * 100) : 0;
-    const unresolvedPct = 100 - resolvedPct;
 
     const allHotspots = new Set<string>();
     const allLocations = new Set<string>();
@@ -409,17 +544,13 @@ export default function DevelopmentPlannerPage() {
     });
 
     const activeSectors = sectors.filter(s => s.totalComplaints > 0);
-    const highestDemand = activeSectors[0] || null;
-    const lowestDemand = activeSectors[activeSectors.length - 1] || null;
 
     return {
-      totalComplaints,
-      totalResolved,
       totalAll,
       resolvedPct,
-      unresolvedPct,
-      highestDemand,
-      lowestDemand,
+      unresolvedPct: 100 - resolvedPct,
+      highestDemand: activeSectors[0] || null,
+      lowestDemand: activeSectors[activeSectors.length - 1] || null,
       hotspotCount: allHotspots.size,
       locationCount: allLocations.size,
     };
@@ -432,7 +563,6 @@ export default function DevelopmentPlannerPage() {
 
     const top = activeSectors[0];
     const reasons: string[] = [];
-
     if (top.totalComplaints === Math.max(...activeSectors.map(s => s.totalComplaints))) {
       reasons.push('Highest complaint density in the constituency');
     }
@@ -442,30 +572,19 @@ export default function DevelopmentPlannerPage() {
     if (top.hotspotCount === Math.max(...activeSectors.map(s => s.hotspotCount))) {
       reasons.push('Multiple hotspot clusters identified across the area');
     }
-    if (top.avgPriority >= 7) {
-      reasons.push('Critical severity issues reported consistently');
-    } else if (top.avgPriority >= 5) {
-      reasons.push('High priority issues with significant safety concerns');
-    }
-    if (reasons.length === 0) {
-      reasons.push('Consistently high demand across multiple indicators');
-    }
+    if (top.avgPriority >= 7) reasons.push('Critical severity issues reported consistently');
+    else if (top.avgPriority >= 5) reasons.push('High priority issues with significant safety concerns');
+    if (reasons.length === 0) reasons.push('Consistently high demand across multiple indicators');
 
     const expectedBenefits: string[] = [];
-    if (top.affectedLocations.size > 0) {
-      expectedBenefits.push(`${top.affectedLocations.size} locations will benefit directly`);
-    }
-    if (top.hotspotCount > 0) {
-      expectedBenefits.push(`${top.hotspotCount} hotspot clusters will be addressed`);
-    }
+    if (top.affectedLocations.size > 0) expectedBenefits.push(`${top.affectedLocations.size} locations will benefit directly`);
+    if (top.hotspotCount > 0) expectedBenefits.push(`${top.hotspotCount} hotspot clusters will be addressed`);
     expectedBenefits.push(`${top.totalComplaints} citizen complaints addressed`);
 
     return { sector: top, reasons, expectedBenefits };
   }, [sectorData]);
 
-  const exportPdf = useCallback(() => {
-    window.print();
-  }, []);
+  const exportPdf = useCallback(() => { window.print(); }, []);
 
   if (loading) {
     return (
@@ -483,11 +602,12 @@ export default function DevelopmentPlannerPage() {
           main { max-width: 100% !important; padding: 0 !important; }
           .card, .card-glass { break-inside: avoid; page-break-inside: avoid; }
         }
+        .tooltip-trigger:hover .tooltip-content { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .tooltip-content { opacity: 0; pointer-events: none; transform: translateY(4px); transition: all 0.15s ease; }
       `}</style>
 
       <nav className="sticky top-0 z-50 no-print" style={{
-        background: 'var(--bg-glass)',
-        backdropFilter: 'blur(20px)',
+        background: 'var(--bg-glass)', backdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--border-primary)',
       }}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -503,13 +623,17 @@ export default function DevelopmentPlannerPage() {
             </div>
           </div>
           <div className="flex items-center gap-3 no-print">
+            {lastUpdated && (
+              <div className="hidden md:flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                <Clock className="w-3 h-3" />
+                <span>{t.lastUpdated}: {lastUpdated.toLocaleDateString()} {lastUpdated.toLocaleTimeString()}</span>
+              </div>
+            )}
             <button onClick={() => { setRefreshing(true); fetchData(); }} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--text-secondary)' }}>
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
             <button onClick={exportPdf} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all" style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-primary)',
-              color: 'var(--text-primary)',
+              background: 'var(--bg-card)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)',
             }}>
               <Download className="w-4 h-4" />
               {t.exportPdf}
@@ -520,33 +644,50 @@ export default function DevelopmentPlannerPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Filters */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="card mb-6 no-print">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{t.filters}</span>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="input-field text-sm">
-              <option value="all">{t.category}: {t.all}</option>
-              {Object.entries(SECTOR_CONFIG).map(([key, cfg]) => (
-                <option key={key} value={key}>{cfg.label}</option>
+        {/* Filters + Priority Legend Row */}
+        <div className="grid lg:grid-cols-3 gap-4 mb-6">
+          {/* Filters */}
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="card no-print lg:col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{t.filters}</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="input-field text-sm">
+                <option value="all">{t.category}: {t.all}</option>
+                {Object.entries(SECTOR_CONFIG).map(([key, cfg]) => (
+                  <option key={key} value={key}>{cfg.label}</option>
+                ))}
+              </select>
+              <select value={filterResolved} onChange={e => setFilterResolved(e.target.value as any)} className="input-field text-sm">
+                <option value="all">{t.resolved}: {t.all}</option>
+                <option value="active">{t.active}</option>
+                <option value="resolved">{t.resolved}</option>
+              </select>
+              <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="input-field text-sm">
+                <option value="all">{t.priority}: {t.all}</option>
+                <option value="critical">{t.critical}</option>
+                <option value="high">{t.high}</option>
+                <option value="medium">{t.medium}</option>
+                <option value="low">{t.low}</option>
+              </select>
+            </div>
+          </motion.div>
+
+          {/* Priority Legend */}
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="card">
+            <p className="text-sm font-bold mb-3" style={{ color: 'var(--text-primary)' }}>{t.priorityLevels}</p>
+            <div className="space-y-2">
+              {PRIORITY_LEVELS.map(level => (
+                <div key={level.label} className="flex items-center gap-2">
+                  <span className="text-sm">{level.dot}</span>
+                  <span className="text-xs font-bold" style={{ color: level.color }}>{level.label}</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>— {level.desc}</span>
+                </div>
               ))}
-            </select>
-            <select value={filterResolved} onChange={e => setFilterResolved(e.target.value as any)} className="input-field text-sm">
-              <option value="all">{t.resolved}: {t.all}</option>
-              <option value="active">{t.active}</option>
-              <option value="resolved">{t.resolved}</option>
-            </select>
-            <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="input-field text-sm">
-              <option value="all">{t.priority}: {t.all}</option>
-              <option value="critical">{t.critical}</option>
-              <option value="high">{t.high}</option>
-              <option value="medium">{t.medium}</option>
-              <option value="low">{t.low}</option>
-            </select>
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+        </div>
 
         {/* Constituency Health Summary */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-6">
@@ -554,8 +695,8 @@ export default function DevelopmentPlannerPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: t.totalComplaints, value: summary.totalAll, icon: FileText, color: '#3b82f6' },
-              { label: t.resolvedPercent, value: `${summary.resolvedPct}%`, icon: CheckCircle2, color: '#10b981' },
-              { label: t.unresolvedPercent, value: `${summary.unresolvedPct}%`, icon: AlertTriangle, color: '#ef4444' },
+              { label: t.resolvedPercent, value: summary.resolvedPct, suffix: '%', icon: CheckCircle2, color: '#10b981' },
+              { label: t.unresolvedPercent, value: summary.unresolvedPct, suffix: '%', icon: AlertTriangle, color: '#ef4444' },
               { label: t.totalHotspots, value: summary.hotspotCount, icon: MapPin, color: '#f59e0b' },
             ].map((item, idx) => (
               <motion.div key={idx} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }}
@@ -565,7 +706,9 @@ export default function DevelopmentPlannerPage() {
                 </div>
                 <div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{item.value}</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    <AnimatedCounter value={item.value} />{item.suffix || ''}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -597,58 +740,136 @@ export default function DevelopmentPlannerPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6">
           <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{t.sectorRanking}</h2>
           <div className="grid gap-4">
-            {sectorData.sectors.filter(s => s.totalComplaints > 0).map((sector, idx) => {
-              const Icon = sector.icon;
-              const priorityLevel = PRIORITY_LEVELS.find(p => sector.avgPriority >= p.min);
-              return (
-                <motion.div key={sector.key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
-                  className="card group hover:scale-[1.01] transition-transform">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black"
-                      style={{ background: `${sector.color}20`, color: sector.color }}>
-                      #{idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Icon className="w-5 h-5" style={{ color: sector.color }} />
-                        <h3 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{sector.label}</h3>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{
-                          background: `${priorityLevel?.color || '#64748b'}20`,
-                          color: priorityLevel?.color || '#64748b',
-                        }}>
-                          {priorityLevel?.label}
-                        </span>
+            <AnimatePresence>
+              {sectorData.sectors.filter(s => s.totalComplaints > 0).map((sector, idx) => {
+                const Icon = sector.icon;
+                const priorityLevel = PRIORITY_LEVELS.find(p => sector.avgPriority >= p.min);
+                return (
+                  <motion.div key={sector.key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.06 }}
+                    layout className="card group hover:scale-[1.005] transition-transform">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black"
+                        style={{ background: `${sector.color}20`, color: sector.color }}>
+                        #{idx + 1}
                       </div>
-
-                      {/* Need Score */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4" style={{ color: sector.needScore >= 70 ? '#ef4444' : sector.needScore >= 40 ? '#f59e0b' : '#10b981' }} />
-                          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t.needScore}: {sector.needScore}</span>
+                      <div className="flex-1 min-w-0">
+                        {/* Header Row */}
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <Icon className="w-5 h-5" style={{ color: sector.color }} />
+                          <h3 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{sector.label}</h3>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{
+                            background: `${priorityLevel?.color || '#64748b'}20`, color: priorityLevel?.color || '#64748b',
+                          }}>
+                            {priorityLevel?.label}
+                          </span>
+                          {sector.trend === 'up' && <TrendingUp className="w-4 h-4" style={{ color: '#ef4444' }} />}
+                          {sector.trend === 'down' && <TrendingDown className="w-4 h-4" style={{ color: '#10b981' }} />}
                         </div>
-                        {sector.trend === 'up' && <TrendingUp className="w-4 h-4" style={{ color: '#ef4444' }} />}
-                        {sector.trend === 'down' && <TrendingDown className="w-4 h-4" style={{ color: '#10b981' }} />}
-                      </div>
 
-                      {/* Progress Bar */}
-                      <div className="w-full h-2 rounded-full mb-3" style={{ background: 'var(--bg-secondary)' }}>
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${sector.needScore}%` }} transition={{ duration: 0.8, delay: idx * 0.1 }}
-                          className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${sector.color}, ${sector.color}cc)` }} />
-                      </div>
+                        {/* Need Score + Progress */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <Tooltip text={t.tooltipNeedScore}>
+                            <div className="flex items-center gap-1.5 cursor-help">
+                              <Zap className="w-4 h-4" style={{ color: sector.needScore >= 70 ? '#ef4444' : sector.needScore >= 40 ? '#f59e0b' : '#10b981' }} />
+                              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t.needScore}: {sector.needScore}</span>
+                              <Info className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                          </Tooltip>
+                        </div>
+                        <div className="w-full h-2.5 rounded-full mb-3" style={{ background: 'var(--bg-secondary)' }}>
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${sector.needScore}%` }} transition={{ duration: 1, delay: idx * 0.08, ease: 'easeOut' }}
+                            className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${sector.color}, ${sector.color}aa)` }} />
+                        </div>
 
-                      {/* Stats */}
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        <span style={{ color: 'var(--text-secondary)' }}>{t.complaints}: <strong style={{ color: 'var(--text-primary)' }}>{sector.totalComplaints}</strong></span>
-                        <span style={{ color: 'var(--text-secondary)' }}>{t.merged}: <strong style={{ color: 'var(--text-primary)' }}>{sector.mergedIssues}</strong></span>
-                        <span style={{ color: 'var(--text-secondary)' }}>{t.hotspots}: <strong style={{ color: 'var(--text-primary)' }}>{sector.hotspotCount}</strong></span>
-                        <span style={{ color: 'var(--text-secondary)' }}>{t.unresolved}: <strong style={{ color: sector.unresolvedCount > 0 ? '#ef4444' : 'var(--text-primary)' }}>{sector.unresolvedCount}</strong></span>
-                        <span style={{ color: 'var(--text-secondary)' }}>{t.resolvedPercent}: <strong style={{ color: 'var(--text-primary)' }}>{sector.percentOfTotal.toFixed(1)}%</strong></span>
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                          <div className="flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+                            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.complaints}: <strong style={{ color: 'var(--text-primary)' }}><AnimatedCounter value={sector.totalComplaints} /></strong></span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+                            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.merged}: <strong style={{ color: 'var(--text-primary)' }}>{sector.mergedIssues}</strong></span>
+                          </div>
+                          <Tooltip text={t.tooltipHotspots}>
+                            <div className="flex items-center gap-1.5 cursor-help">
+                              <MapPin className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+                              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.hotspots}: <strong style={{ color: 'var(--text-primary)' }}>{sector.hotspotCount}</strong></span>
+                              <Info className="w-2.5 h-2.5" style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                          </Tooltip>
+                          <Tooltip text={t.tooltipResolved}>
+                            <div className="flex items-center gap-1.5 cursor-help">
+                              <CheckCircle2 className="w-3.5 h-3.5" style={{ color: '#10b981' }} />
+                              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.resolvedPercent}: <strong style={{ color: '#10b981' }}>{sector.resolvedPercent.toFixed(0)}%</strong></span>
+                              <Info className="w-2.5 h-2.5" style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                          </Tooltip>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                          <div className="flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" style={{ color: sector.unresolvedCount > 0 ? '#ef4444' : 'var(--text-muted)' }} />
+                            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.unresolved}: <strong style={{ color: sector.unresolvedCount > 0 ? '#ef4444' : 'var(--text-primary)' }}>{sector.unresolvedCount}</strong></span>
+                          </div>
+                          <Tooltip text={t.tooltipCitizens}>
+                            <div className="flex items-center gap-1.5 cursor-help">
+                              <Users className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+                              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.estimatedCitizens}: <strong style={{ color: 'var(--text-primary)' }}><AnimatedCounter value={sector.estimatedCitizens} /></strong></span>
+                              <Info className="w-2.5 h-2.5" style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                          </Tooltip>
+                          <Tooltip text={t.tooltipBudget}>
+                            <div className="flex items-center gap-1.5 cursor-help">
+                              <IndianRupee className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+                              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.suggestedBudget}: <strong style={{ color: sector.color }}>{sector.suggestedBudget}</strong></span>
+                              <Info className="w-2.5 h-2.5" style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                          </Tooltip>
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+                            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>% of Total: <strong style={{ color: 'var(--text-primary)' }}>{sector.percentOfTotal.toFixed(1)}%</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Why Ranked Section */}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.06 + 0.3 }}
+                          className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                          <p className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: sector.color }}>
+                            <Zap className="w-3 h-3" />
+                            {t.whyRanked} #{idx + 1}?
+                          </p>
+                          <div className="grid md:grid-cols-2 gap-1.5">
+                            {sector.whyRanked.map((reason, ri) => (
+                              <motion.div key={ri} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.06 + 0.35 + ri * 0.05 }}
+                                className="flex items-start gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: '#10b981' }} />
+                                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{reason}</span>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+
+                        {/* Budget Reasons */}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.06 + 0.4 }}
+                          className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border-primary)' }}>
+                          <p className="text-xs font-bold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                            <IndianRupee className="w-3 h-3" />
+                            {t.budgetReason}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {sector.budgetReasons.map((reason, ri) => (
+                              <span key={ri} className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                                {reason}
+                              </span>
+                            ))}
+                          </div>
+                        </motion.div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         </motion.div>
 
@@ -668,7 +889,7 @@ export default function DevelopmentPlannerPage() {
               if (reasons.length === 0) reasons.push('Consistently high demand across indicators');
 
               return (
-                <motion.div key={sector.key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                <motion.div key={sector.key} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.06 }}
                   className="card-glass">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
@@ -682,11 +903,14 @@ export default function DevelopmentPlannerPage() {
                         <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: `${sector.color}20`, color: sector.color }}>
                           Score: {sector.needScore}
                         </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                          {sector.suggestedBudget}
+                        </span>
                       </div>
                       <div className="space-y-1">
                         {reasons.slice(0, 3).map((reason, ri) => (
                           <p key={ri} className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-secondary)' }}>
-                            <span className="mt-0.5">•</span>
+                            <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#10b981' }} />
                             {reason}
                           </p>
                         ))}
@@ -711,6 +935,7 @@ export default function DevelopmentPlannerPage() {
                     <span className="px-3 py-1 rounded-lg text-sm font-bold" style={{ background: `${investmentRec.sector.color}20`, color: investmentRec.sector.color }}>
                       {t.recommended}: {investmentRec.sector.label}
                     </span>
+                    <span className="text-sm font-bold" style={{ color: investmentRec.sector.color }}>{investmentRec.sector.suggestedBudget}</span>
                   </div>
                   <div className="space-y-2">
                     {investmentRec.reasons.map((reason, idx) => (
@@ -741,22 +966,18 @@ export default function DevelopmentPlannerPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="mb-6">
           <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{t.charts}</h2>
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Sector Ranking Bar Chart */}
             <div className="card">
               <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{t.sectorRanking}</h3>
               <SectorBarChart sectors={sectorData.sectors.filter(s => s.totalComplaints > 0)} />
             </div>
-            {/* Complaint Distribution Pie */}
             <div className="card">
               <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{t.complaintDistribution}</h3>
               <ComplaintPieChart sectors={sectorData.sectors.filter(s => s.totalComplaints > 0)} />
             </div>
-            {/* Top 5 Sectors */}
             <div className="card">
               <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{t.topSectors}</h3>
               <TopSectorsChart sectors={sectorData.sectors.filter(s => s.totalComplaints > 0).slice(0, 5)} />
             </div>
-            {/* Resolution Status */}
             <div className="card">
               <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--text-primary)' }}>{t.resolutionStatus}</h3>
               <ResolutionPieChart sectors={sectorData.sectors.filter(s => s.totalComplaints > 0)} />
@@ -770,28 +991,19 @@ export default function DevelopmentPlannerPage() {
 
 function SectorBarChart({ sectors }: { sectors: SectorData[] }) {
   const [ChartComponents, setChartComponents] = useState<any>(null);
-
   useEffect(() => {
     (async () => {
       const recharts = await import('recharts');
       setChartComponents({
-        BarChart: recharts.BarChart,
-        Bar: recharts.Bar,
-        XAxis: recharts.XAxis,
-        YAxis: recharts.YAxis,
-        CartesianGrid: recharts.CartesianGrid,
-        Tooltip: recharts.Tooltip,
-        ResponsiveContainer: recharts.ResponsiveContainer,
-        Cell: recharts.Cell,
+        BarChart: recharts.BarChart, Bar: recharts.Bar, XAxis: recharts.XAxis,
+        YAxis: recharts.YAxis, CartesianGrid: recharts.CartesianGrid,
+        Tooltip: recharts.Tooltip, ResponsiveContainer: recharts.ResponsiveContainer, Cell: recharts.Cell,
       });
     })();
   }, []);
-
   if (!ChartComponents) return <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>;
-
   const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } = ChartComponents;
   const data = sectors.map(s => ({ name: s.label.length > 12 ? s.label.slice(0, 12) + '…' : s.label, score: s.needScore, color: s.color }));
-
   return (
     <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
@@ -807,25 +1019,17 @@ function SectorBarChart({ sectors }: { sectors: SectorData[] }) {
 
 function ComplaintPieChart({ sectors }: { sectors: SectorData[] }) {
   const [ChartComponents, setChartComponents] = useState<any>(null);
-
   useEffect(() => {
     (async () => {
       const recharts = await import('recharts');
       setChartComponents({
-        PieChart: recharts.PieChart,
-        Pie: recharts.Pie,
-        Cell: recharts.Cell,
-        ResponsiveContainer: recharts.ResponsiveContainer,
-        Tooltip: recharts.Tooltip,
-        Legend: recharts.Legend,
+        PieChart: recharts.PieChart, Pie: recharts.Pie, Cell: recharts.Cell,
+        ResponsiveContainer: recharts.ResponsiveContainer, Tooltip: recharts.Tooltip, Legend: recharts.Legend,
       });
     })();
   }, []);
-
   if (!ChartComponents) return <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>;
-
   const data = sectors.map(s => ({ name: s.label, value: s.totalComplaints, color: s.color }));
-
   return (
     <ChartComponents.PieChart>
       <ChartComponents.Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3} dataKey="value" animationDuration={800}>
@@ -839,28 +1043,19 @@ function ComplaintPieChart({ sectors }: { sectors: SectorData[] }) {
 
 function TopSectorsChart({ sectors }: { sectors: SectorData[] }) {
   const [ChartComponents, setChartComponents] = useState<any>(null);
-
   useEffect(() => {
     (async () => {
       const recharts = await import('recharts');
       setChartComponents({
-        BarChart: recharts.BarChart,
-        Bar: recharts.Bar,
-        XAxis: recharts.XAxis,
-        YAxis: recharts.YAxis,
-        CartesianGrid: recharts.CartesianGrid,
-        Tooltip: recharts.Tooltip,
-        ResponsiveContainer: recharts.ResponsiveContainer,
-        Cell: recharts.Cell,
+        BarChart: recharts.BarChart, Bar: recharts.Bar, XAxis: recharts.XAxis,
+        YAxis: recharts.YAxis, CartesianGrid: recharts.CartesianGrid,
+        Tooltip: recharts.Tooltip, ResponsiveContainer: recharts.ResponsiveContainer, Cell: recharts.Cell,
       });
     })();
   }, []);
-
   if (!ChartComponents) return <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>;
-
   const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } = ChartComponents;
   const data = sectors.map(s => ({ name: s.label.length > 10 ? s.label.slice(0, 10) + '…' : s.label, complaints: s.totalComplaints, color: s.color }));
-
   return (
     <BarChart data={data} margin={{ left: 10, right: 20 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
@@ -876,30 +1071,22 @@ function TopSectorsChart({ sectors }: { sectors: SectorData[] }) {
 
 function ResolutionPieChart({ sectors }: { sectors: SectorData[] }) {
   const [ChartComponents, setChartComponents] = useState<any>(null);
-
   useEffect(() => {
     (async () => {
       const recharts = await import('recharts');
       setChartComponents({
-        PieChart: recharts.PieChart,
-        Pie: recharts.Pie,
-        Cell: recharts.Cell,
-        ResponsiveContainer: recharts.ResponsiveContainer,
-        Tooltip: recharts.Tooltip,
-        Legend: recharts.Legend,
+        PieChart: recharts.PieChart, Pie: recharts.Pie, Cell: recharts.Cell,
+        ResponsiveContainer: recharts.ResponsiveContainer, Tooltip: recharts.Tooltip, Legend: recharts.Legend,
       });
     })();
   }, []);
-
   if (!ChartComponents) return <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>;
-
   const totalResolved = sectors.reduce((sum, s) => sum + (s.totalComplaints - s.unresolvedCount), 0);
   const totalUnresolved = sectors.reduce((sum, s) => sum + s.unresolvedCount, 0);
   const data = [
     { name: 'Resolved', value: totalResolved, color: '#10b981' },
     { name: 'Unresolved', value: totalUnresolved, color: '#ef4444' },
   ].filter(d => d.value > 0);
-
   return (
     <ChartComponents.PieChart>
       <ChartComponents.Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3} dataKey="value" animationDuration={800}>
