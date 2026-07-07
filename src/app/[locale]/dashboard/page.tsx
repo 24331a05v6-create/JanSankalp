@@ -313,10 +313,7 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  useEffect(() => {
-    const interval = setInterval(() => { fetchData(); }, 30000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  useEffect(() => {}, []);
 
   const runMerge = async () => {
     setMerging(true);
@@ -381,13 +378,19 @@ export default function DashboardPage() {
     return b.priority_score - a.priority_score;
   });
 
+  const allMergedSubIds = new Set(mergedIssues.flatMap(i => i.merged_submission_ids));
+  const unmergedSubs = submissions.filter(s => !allMergedSubIds.has(s.id) && (!filterCategory || s.category === filterCategory));
+
   const categoryCounts = mergedIssues.reduce((acc, i) => {
     acc[i.category] = (acc[i.category] || 0) + i.complaint_count;
     return acc;
   }, {} as Record<string, number>);
+  unmergedSubs.forEach(s => {
+    categoryCounts[s.category] = (categoryCounts[s.category] || 0) + 1;
+  });
 
   const departmentGroups = Object.keys(CATEGORY_META)
-    .filter(cat => sortedFiltered.some(i => i.category === cat))
+    .filter(cat => sortedFiltered.some(i => i.category === cat) || unmergedSubs.some(s => s.category === cat))
     .sort((a, b) => (categoryCounts[b] || 0) - (categoryCounts[a] || 0));
 
   const deptIssueCounts: Record<string, Record<string, number>> = {};
@@ -398,8 +401,8 @@ export default function DashboardPage() {
   });
 
   const stats = {
-    totalComplaints: mergedIssues.reduce((sum, i) => sum + i.complaint_count, 0),
-    uniqueIssues: mergedIssues.length,
+    totalComplaints: mergedIssues.reduce((sum, i) => sum + i.complaint_count, 0) + unmergedSubs.length,
+    uniqueIssues: mergedIssues.length + unmergedSubs.length,
     topPriority: mergedIssues.reduce((max, i) => Math.max(max, i.priority_score), 0),
     coverage: new Set(submissions.filter(s => s.latitude).map(s => `${s.latitude?.toFixed(2)},${s.longitude?.toFixed(2)}`)).size,
     ivrCount: submissions.filter(s => s.source === 'ivr').length,
@@ -616,7 +619,7 @@ export default function DashboardPage() {
 
                         {isExpanded && (
                           <div style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>
-                            {catIssues.length === 0 ? (
+                            {catIssues.length === 0 && unmergedSubs.filter(s => s.category === cat).length === 0 ? (
                               <p className="text-sm text-center py-4" style={{ color: 'var(--text-tertiary)' }}>No issues in this department</p>
                             ) : (
                               <div style={{ borderTop: '1px solid var(--border-secondary)' }}>
@@ -761,6 +764,48 @@ export default function DashboardPage() {
                                               )}
                                             </div>
                                           )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+
+                                {unmergedSubs.filter(s => s.category === cat).length > 0 && catIssues.length > 0 && (
+                                  <div className="px-4 py-2" style={{ borderTop: '1px dashed var(--border-primary)' }}>
+                                    <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Individual Reports</span>
+                                  </div>
+                                )}
+                                {unmergedSubs.filter(s => s.category === cat).sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0)).map((sub) => {
+                                  const priority = getPriorityLevel(sub.priority_score || 0);
+                                  const text = sub.allTranslations?.[lang] || sub.allTranslations?.['en'] || sub.ai_summary || sub.text_input || sub.voice_transcript || '(No description)';
+                                  return (
+                                    <div key={sub.id}
+                                      className="px-4 py-3 transition-colors"
+                                      style={{ borderLeft: '4px solid transparent' }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                                      <div className="flex items-start gap-3">
+                                        <div className="mt-0.5 w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0"
+                                          style={{ background: priority.bgColor }}>
+                                          <span className="text-xs font-bold" style={{ color: priority.textColor }}>1</span>
+                                          <span className="text-[9px]" style={{ color: priority.textColor }}>new</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm line-clamp-2 font-medium" style={{ color: 'var(--text-primary)' }}>{text}</p>
+                                          <div className="flex items-center gap-3 text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                                            {sub.location_name && (
+                                              <span className="flex items-center gap-1">
+                                                <MapPin className="w-3 h-3" />
+                                                {sub.location_name}
+                                              </span>
+                                            )}
+                                            {sub.source === 'ivr' && (
+                                              <span className="flex items-center gap-1" style={{ color: '#f59e0b' }}>
+                                                <Phone className="w-3 h-3" />
+                                                IVR
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
