@@ -146,9 +146,9 @@ export interface IVRComplaint {
 }
 
 export const IVR_LANGUAGES: { value: IVRLanguage; label: string; nativeLabel: string; shortcut: number }[] = [
-  { value: 'te', label: 'Telugu', nativeLabel: 'తెలుగు', shortcut: 1 },
+  { value: 'en', label: 'English', nativeLabel: 'English', shortcut: 1 },
   { value: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', shortcut: 2 },
-  { value: 'en', label: 'English', nativeLabel: 'English', shortcut: 3 },
+  { value: 'te', label: 'Telugu', nativeLabel: 'తెలుగు', shortcut: 3 },
   { value: 'ta', label: 'Tamil', nativeLabel: 'தமிழ்', shortcut: 4 },
   { value: 'kn', label: 'Kannada', nativeLabel: 'ಕನ್ನಡ', shortcut: 5 },
   { value: 'ml', label: 'Malayalam', nativeLabel: 'മലയാളം', shortcut: 6 },

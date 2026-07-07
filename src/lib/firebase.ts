@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit as firestoreLimit, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -13,7 +13,12 @@ const firebaseConfig = {
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
+
+let _storage: ReturnType<typeof getStorage> | null = null;
+function getStorageInstance() {
+  if (!_storage) _storage = getStorage(app);
+  return _storage;
+}
 
 export interface SubmissionData {
   text_input?: string;
@@ -233,7 +238,7 @@ async function uploadWithRetry(
       console.log(`[IVR Upload] Attempt ${attempt}/${maxRetries} for ${path} (${file.size} bytes)`);
       onProgress?.(attempt === 1 ? 10 : attempt === 2 ? 40 : 70);
 
-      const storageRef = ref(storage, path);
+      const storageRef = ref(getStorageInstance(), path);
       const snapshot = await withTimeout(
         uploadBytes(storageRef, file),
         60000,
@@ -275,4 +280,4 @@ export async function uploadAudioToStorage(
   return uploadWithRetry(file, path, 3, onProgress);
 }
 
-export { db, storage };
+export { db, getStorageInstance as storage };
