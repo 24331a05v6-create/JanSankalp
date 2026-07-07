@@ -23,26 +23,25 @@
 
 ## 🎯 Problem Statement
 
-India has **1.4 billion citizens** across **28 states and 8 union territories**, speaking **22 official languages**. Most citizens—especially in rural areas—face significant barriers when trying to report infrastructure issues, civic problems, or development needs to their elected representatives:
+Members of Parliament receive development requests through a chaotic mix of channels — **public meetings, letters, social media, grievance portals, and direct representations** — while local development plans contain **dozens of competing proposed projects**. There is currently **no objective, data-driven way** to:
 
-- **Language barriers** exclude non-English speakers from digital platforms
-- **Literacy limitations** prevent written complaint submission
-- **Duplicate complaints** overwhelm government systems with redundant data
-- **No prioritization** means critical issues get buried under noise
-- **No action tracking** leaves citizens without accountability
-- **Fragmented data** across departments prevents systemic analysis
+- **Consolidate** thousands of citizen requests scattered across multiple channels into a single, structured view
+- **Spot recurring needs** — the same road complaint or water shortage reported 200 times across villages is indistinguishable from 200 unrelated issues
+- **Weigh competing proposals against real demand** — for example, comparing community requests for school upgrades against actual enrollment data and travel-distance metrics versus a proposed vocational centre, or evaluating a new road against verified complaint density in that corridor
+
+The result: **critical issues get buried**, **similar complaints duplicate effort**, **resource allocation is politically driven rather than evidence-based**, and **citizens lose trust** when their voices disappear into a void with no feedback loop. MPs lack a unified, intelligent system to transform raw citizen input into prioritized, actionable development decisions.
 
 ---
 
 ## 💡 Solution Overview
 
-**JanSankalp** is a comprehensive, AI-driven citizen development platform that enables:
+**JanSankalp** is an AI-powered citizen development platform that gives MPs a **single, intelligent system** to consolidate, analyze, and act on development requests from every channel:
 
-1. **Multilingual complaint submission** in 12 Indian languages via text, voice, or phone call
-2. **AI-powered analysis** that categorizes, prioritizes, deduplicates, and generates actionable recommendations
-3. **Interactive GIS dashboard** for MPs and government officials with hotspot detection, department-wise analytics, and downloadable reports
-4. **Realistic IVR system** that allows citizens to submit complaints via voice with telephone keypad navigation—no smartphone required
-5. **Department-wise tracking** with resolution status and government scheme mapping
+1. **Unified submission** — citizens submit via web form, voice recording, or IVR phone call in 12 Indian languages. Every request — regardless of channel — enters one structured database.
+2. **AI-powered consolidation** — Gemini 2.0 Flash automatically categorizes complaints into 8 government departments, detects duplicates, and merges recurring complaints into prioritized issue clusters.
+3. **Demand-driven prioritization** — a 6-factor weighted scoring algorithm ranks issues by severity, safety risk, urgency, affected population, compliance risk, and frequency — replacing gut-feel with evidence.
+4. **Actionable recommendations** — AI generates department-specific next steps, maps complaints to relevant government schemes, estimates timelines, and identifies required documents.
+5. **Interactive GIS dashboard** — MPs visualize complaint hotspots on a map, filter by department, track resolution status, and export data — turning scattered feedback into spatial intelligence for competing project decisions.
 
 ---
 
@@ -527,38 +526,38 @@ POST /api/submissions
 
 ### Why JanSankalp Stands Out
 
-**🏛️ Solves a Real Societal Problem**
-India's 543 MPs handle millions of citizen complaints annually. JanSankalp digitizes and intelligently processes this workflow, making governance more responsive and accountable.
+**🏛️ Solves a Real Institutional Problem**
+MPs juggle public meetings, letters, social media, and grievance portals with no unified view. JanSankalp consolidates every channel into one intelligent system — turning scattered citizen voices into structured, actionable data.
 
-**🤖 AI-Driven Decision Support**
-Every complaint is analyzed by Gemini 2.0 Flash—categorized, deduplicated, priority-scored, and paired with actionable recommendations including relevant government schemes. This transforms raw complaints into decision-ready insights.
+**🤖 AI-Driven Demand Intelligence**
+Gemini 2.0 Flash doesn't just categorize — it detects recurring patterns across hundreds of complaints, clusters similar issues, and scores demand intensity. An MP can now objectively compare: "200 complaints about school infrastructure in Block A" versus "15 requests for a new vocational centre in Block B."
 
 **🌍 Multilingual Accessibility**
-Supporting 12 Indian languages ensures no citizen is excluded due to language barriers. The IVR system extends this to non-literate citizens who can submit complaints entirely by voice.
+Supporting 12 Indian languages ensures no citizen is excluded. The IVR system extends this to non-literate citizens who can submit complaints entirely by voice — no smartphone, no typing, no literacy required.
 
 **🎙️ Voice-First Citizen Interaction**
-The realistic IVR phone system with DTMF tones, TTS prompts, and speech-to-text makes the platform accessible to citizens who cannot type or read.
+The realistic IVR phone system with DTMF tones, TTS prompts, and speech-to-text makes the platform accessible to the last-mile citizen who has never used a computer.
 
 **🗺️ Interactive GIS Visualization**
-The Leaflet-powered map provides geographic intelligence—hotspots, density, and spatial patterns that text-only dashboards miss.
+The Leaflet-powered map reveals geographic demand patterns — where complaints cluster, where infrastructure gaps overlap, and where proposed projects would have the most impact based on verified citizen demand.
 
-**🧠 Intelligent Complaint Prioritization**
-A 6-factor weighted algorithm ensures the most critical issues—safety risks, high-impact, urgent—rise to the top automatically.
+**🧠 Evidence-Based Prioritization**
+A 6-factor weighted algorithm replaces political lobbying with data. Severity, safety risk, urgency, affected population, compliance risk, and frequency — every issue scored objectively so the most critical needs rise to the top.
 
 **📋 Actionable Recommendations**
-AI doesn't just analyze; it recommends. Specific government schemes, responsible departments, estimated timelines, and required documents give MPs a ready-to-execute action plan.
+AI generates department-specific next steps, maps complaints to relevant government schemes (PMGSY, Swachh Bharat, etc.), estimates timelines, and identifies required documents — giving MPs a ready-to-execute action plan.
 
 **⚡ Scalable Architecture**
-Built on Next.js 16, Firebase, and Gemini AI—serverless, cloud-native, and ready to scale from a single constituency to a national platform.
+Built on Next.js 16, Firebase, and Gemini AI — serverless, cloud-native, and ready to scale from a single constituency to a national platform handling millions of requests.
 
 **🎨 Enterprise-Grade UI/UX**
-Glass morphism, dark mode, Framer Motion animations, responsive design—the kind of polish expected from a production SaaS product, not a hackathon project.
+Glass morphism, dark mode, Framer Motion animations, responsive design — the polish of a production SaaS product, built for real deployment, not just a demo.
 
 **📊 Data-Driven Governance**
-Real-time analytics, trend analysis, and downloadable reports transform gut-feel governance into evidence-based decision-making.
+Real-time analytics, trend analysis, and downloadable reports transform gut-feel governance into evidence-based decision-making. Competing project proposals can now be weighed against verified demand data.
 
 **🌐 Built for Digital India**
-Aligned with India's Digital Public Infrastructure vision—multilingual, voice-first, accessible, and designed for the last-mile citizen.
+Aligned with India's Digital Public Infrastructure vision — multilingual, voice-first, accessible, and designed for the governance challenges of a 1.4-billion-person democracy.
 
 ---
 
