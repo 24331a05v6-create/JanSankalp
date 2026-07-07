@@ -125,6 +125,13 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     unresolved: 'Unresolved',
     estimatedCitizens: 'Est. Citizens',
     suggestedBudget: 'Suggested Budget',
+    sectorNeedScore: 'Sector Need Score',
+    scoreBreakdown: 'Score Breakdown',
+    builtFrom: 'Built From',
+    finalWeightedScore: 'Final Weighted Score',
+    budgetBasedOn: 'Budget Based On',
+    tooltipProposalScore: 'Proposal Score is calculated using multiple factors including: Base Sector Need Score, Related Complaint Count, Average Complaint Priority, Hotspot Count, and Unresolved Complaints. The Proposal Score is the final score used for ranking development proposals.',
+    tooltipSectorNeed: 'This represents the development need of the sector based on complaint analysis. It is only one component of the final Proposal Score.',
     whyRanked: 'Why this Proposal Ranked Here',
     comparisonView: 'Comparison View',
     bestProposal: 'Best Proposal Recommendation',
@@ -138,7 +145,7 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     project: 'Project',
     score: 'Score',
     complaints: 'Complaints',
-    needScore: 'Need Score',
+    sectorNeedScoreCol: 'Sector Need',
     citizens: 'Citizens',
     budget: 'Budget',
     priority: 'Priority',
@@ -181,6 +188,13 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     unresolved: 'अनसुलझी',
     estimatedCitizens: 'अनुमानित नागरिक',
     suggestedBudget: 'अनुशंसित बजट',
+    sectorNeedScore: 'क्षेत्र आवश्यकता स्कोर',
+    scoreBreakdown: 'स्कोर विवरण',
+    builtFrom: 'से बना है',
+    finalWeightedScore: 'अंतिम भारित स्कोर',
+    budgetBasedOn: 'बजट आधारित',
+    tooltipProposalScore: 'प्रस्ताव स्कोर कई कारकों का उपयोग करके गणना की जाती है जिसमें शामिल हैं: आधार क्षेत्र आवश्यकता स्कोर, संबंधित शिकायत गिनती, औसत शिकायत प्राथमिकता, हॉटस्पॉट गिनती, और अनसुलझी शिकायतें।',
+    tooltipSectorNeed: 'यह शिकायत विश्लेषण के आधार पर क्षेत्र की विकास आवश्यकता को दर्शाता है। यह केवल अंतिम प्रस्ताव स्कोर का एक घटक है।',
     whyRanked: 'यह प्रस्ताव यहाँ क्यों रैंक किया गया',
     comparisonView: 'तुलना दृश्य',
     bestProposal: 'सर्वोत्तम प्रस्ताव सिफारिश',
@@ -194,7 +208,7 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     project: 'परियोजना',
     score: 'स्कोर',
     complaints: 'शिकायतें',
-    needScore: 'आवश्यकता स्कोर',
+    sectorNeedScoreCol: 'क्षेत्र आवश्यकता',
     citizens: 'नागरिक',
     budget: 'बजट',
     priority: 'प्राथमिकता',
@@ -237,6 +251,13 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     unresolved: 'தீர்க்கப்படாத',
     estimatedCitizens: 'மதிப்பிடப்பட்ட குடிமக்கள்',
     suggestedBudget: 'பரிந்துரைக்கப்பட்ட பட்ஜெட்',
+    sectorNeedScore: 'துறை தேவை மதிப்பெண்',
+    scoreBreakdown: 'மதிப்பெண் விவரம்',
+    builtFrom: 'இருந்து உருவாக்கப்பட்டது',
+    finalWeightedScore: 'இறுதி எடை மதிப்பெண்',
+    budgetBasedOn: 'பட்ஜெட் அடிப்படையில்',
+    tooltipProposalScore: 'திட்ட மதிப்பெண் பல காரணிகளைப் பயன்படுத்தி கணக்கிடப்படுகிறது: அடிப்படை துறை தேவை மதிப்பெண், தொடர்புடைய புகார் எண்ணிக்கை, சராசரி புகார் முன்னுரிமை, ஹாட்ஸ்பாட் எண்ணிக்கை மற்றும் தீர்க்கப்படாத புகார்கள்.',
+    tooltipSectorNeed: 'இது புகார் பகுப்பாய்வின் அடிப்படையில் துறையின் மேம்பாட்டு தேவையைக் குறிக்கிறது. இது இறுதி திட்ட மதிப்பெண்ணின் ஒரு பகுதி மட்டுமே.',
     whyRanked: 'இந்த திட்டம் ஏன் இங்கே தரவரிசை',
     comparisonView: 'ஒப்பீட்டு காட்சி',
     bestProposal: 'சிறந்த திட்ட பரிந்துரை',
@@ -250,7 +271,7 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     project: 'திட்டம்',
     score: 'மதிப்பெண்',
     complaints: 'புகார்கள்',
-    needScore: 'தேவை மதிப்பெண்',
+    sectorNeedScoreCol: 'துறை தேவை',
     citizens: 'குடிமக்கள்',
     budget: 'பட்ஜெட்',
     priority: 'முன்னுரிமை',
@@ -628,9 +649,14 @@ export default function ProposalEvaluatorPage() {
 
                           {/* Score + Progress */}
                           <div className="flex items-center gap-3 mb-3">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 relative group">
                               <Zap className="w-4 h-4" style={{ color: proposal.proposalScore >= 70 ? '#ef4444' : proposal.proposalScore >= 40 ? '#f59e0b' : '#10b981' }} />
                               <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t.proposalScore}: {proposal.proposalScore}</span>
+                              <Info className="w-3.5 h-3.5 cursor-help" style={{ color: 'var(--text-muted)' }} />
+                              <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity w-72"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }}>
+                                {t.tooltipProposalScore}
+                              </div>
                             </div>
                           </div>
                           <div className="w-full h-2.5 rounded-full mb-3" style={{ background: 'var(--bg-secondary)' }}>
@@ -670,11 +696,36 @@ export default function ProposalEvaluatorPage() {
                               <IndianRupee className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
                               <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.suggestedBudget}: <strong style={{ color }}>{proposal.suggestedBudget}</strong></span>
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 relative group">
                               <Zap className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
-                              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.needScore}: <strong style={{ color: 'var(--text-primary)' }}>{proposal.existingNeedScore}</strong></span>
+                              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.sectorNeedScore}: <strong style={{ color: 'var(--text-primary)' }}>{proposal.existingNeedScore}</strong></span>
+                              <Info className="w-3 h-3 cursor-help" style={{ color: 'var(--text-muted)' }} />
+                              <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity w-72"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }}>
+                                {t.tooltipSectorNeed}
+                              </div>
                             </div>
                           </div>
+
+                          {/* Score Breakdown */}
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.06 + 0.25 }}
+                            className="mt-2 pt-2" style={{ borderTop: '1px solid var(--border-primary)' }}>
+                            <p className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                              <Layers className="w-3 h-3" />
+                              {t.scoreBreakdown}
+                            </p>
+                            <div className="space-y-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              <div className="flex justify-between"><span>{t.sectorNeedScore}</span><span style={{ color: 'var(--text-primary)' }}>{proposal.existingNeedScore}</span></div>
+                              <div className="flex justify-between"><span>{t.relatedComplaints}</span><span style={{ color: 'var(--text-primary)' }}>{proposal.relatedComplaints}</span></div>
+                              <div className="flex justify-between"><span>{t.hotspots}</span><span style={{ color: 'var(--text-primary)' }}>{proposal.hotspotCount}</span></div>
+                              <div className="flex justify-between"><span>{t.unresolved}</span><span style={{ color: 'var(--text-primary)' }}>{proposal.unresolvedCount}</span></div>
+                              <div className="flex justify-between"><span>{t.priority}</span><span style={{ color: 'var(--text-primary)' }}>{proposal.avgPriority.toFixed(1)}</span></div>
+                              <div className="flex justify-between pt-1 font-bold" style={{ borderTop: '1px dashed var(--border-primary)' }}>
+                                <span>{t.finalWeightedScore}</span>
+                                <span style={{ color }}>{proposal.proposalScore}</span>
+                              </div>
+                            </div>
+                          </motion.div>
 
                           {/* Why Ranked */}
                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.06 + 0.3 }}
@@ -700,6 +751,9 @@ export default function ProposalEvaluatorPage() {
                             <p className="text-xs font-bold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
                               <IndianRupee className="w-3 h-3" />
                               {t.suggestedBudget}: <span style={{ color }}>{proposal.suggestedBudget}</span>
+                            </p>
+                            <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>
+                              {t.budgetBasedOn}: {t.proposalScore}: {proposal.proposalScore}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {proposal.budgetReasons.map((reason, ri) => (
@@ -768,7 +822,7 @@ export default function ProposalEvaluatorPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                    {[t.rank, t.project, t.score, t.complaints, t.needScore, t.hotspots, t.affectedLocations, t.citizens, t.budget, t.priority].map(h => (
+                    {[t.rank, t.project, t.score, t.complaints, t.sectorNeedScoreCol, t.hotspots, t.affectedLocations, t.citizens, t.budget, t.priority].map(h => (
                       <th key={h} className="text-left py-3 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>{h}</th>
                     ))}
                   </tr>

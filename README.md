@@ -68,6 +68,8 @@ The result: **critical issues get buried**, **similar complaints duplicate effor
 | 🌙 | **Dark/Light Mode** | Theme-aware UI with smooth transitions and localStorage persistence |
 | ⚡ | **Modern UI/UX** | Glass morphism, Framer Motion animations, enterprise-grade design |
 | 📊 | **Project Prioritization** | AI ranks proposed projects against real citizen demand data with explainable reasons |
+| 🏗️ | **Development Planner** | Constituency-wide sector analysis with Need Score, budget recommendations, and visual charts |
+| 🏆 | **Proposal Evaluator** | Compare development proposals against complaint data with Score Breakdown and budget rationale |
 | ☁️ | **Cloud Database** | Firebase Firestore with real-time sync and Firebase Storage for audio files |
 
 ---
@@ -108,6 +110,26 @@ The result: **critical issues get buried**, **similar complaints duplicate effor
 | | Hotspot & Impact Analysis | ✅ |
 | | Government Scheme Suggestions | ✅ |
 | | Local Storage Persistence | ✅ |
+| **Development Planner** | Sector-Wide Need Analysis | ✅ |
+| | Development Need Score (4-factor) | ✅ |
+| | Recommended Development Order | ✅ |
+| | Investment Recommendation | ✅ |
+| | 4 Recharts Visualizations | ✅ |
+| | Priority Legend | ✅ |
+| | Estimated Citizens Affected | ✅ |
+| | Suggested Budget by Score | ✅ |
+| | Why Ranked #N? Explanation | ✅ |
+| | Export PDF | ✅ |
+| **Proposal Evaluator** | Add/Edit/Delete Proposals | ✅ |
+| | Proposal Score (5-factor weighted) | ✅ |
+| | Score Breakdown Transparency | ✅ |
+| | Comparison View Table | ✅ |
+| | Best Proposal Recommendation | ✅ |
+| | Budget Rationale per Proposal | ✅ |
+| | Why Ranked Explanation | ✅ |
+| | 4 Recharts Charts | ✅ |
+| | Category Filter | ✅ |
+| | LocalStorage Persistence | ✅ |
 | **UI/UX** | Dark Mode | ✅ |
 | | Light Mode | ✅ |
 | | Theme Persistence | ✅ |
@@ -164,6 +186,12 @@ Detects the spoken language from voice transcripts and transliterates Roman-scri
 
 ### 8. AI Project Prioritization
 The `/api/projects/prioritize` endpoint uses Gemini 2.0 Flash to analyze proposed development projects against real citizen demand data. For each project, it matches complaints by category, calculates a 0-100 priority score based on complaint frequency (40%), severity (30%), hotspot density (15%), and affected population (15%). Returns ranked projects with explainable reasons, expected impact, suggested government schemes, and responsible departments — helping MPs decide which projects to fund based on actual demand rather than guesswork.
+
+### 9. Constituency Development Planner
+All calculations done locally from Firebase complaint data — no Gemini API required. Groups complaints into 8 sectors and calculates a Development Need Score (35% priority + 25% count + 20% hotspots + 20% unresolved%). Generates recommended development order, investment recommendations ("If ₹1 Crore becomes available"), estimated citizens affected, suggested budgets mapped from Need Score, and explainable "Why Ranked #N?" reasons per sector. Includes 4 Recharts visualizations, priority legend, and PDF export.
+
+### 10. Development Proposal Evaluator
+MPs add real development proposals (e.g., "Upgrade Power Network", "Build Water Pipeline") and the system evaluates them against existing complaint data. Proposal Score is calculated locally using a 5-factor weighted formula: 30% Base Sector Need Score + 25% Complaint Count + 20% Average Priority + 15% Hotspot Count + 10% Unresolved Complaints. Features Score Breakdown transparency, budget rationale ("Budget Based On: Proposal Score: 90"), comparison view table, best proposal recommendation, and 4 Recharts charts. All without Gemini API.
 
 ---
 
@@ -232,8 +260,8 @@ The `/api/projects/prioritize` endpoint uses Gemini 2.0 Flash to analyze propose
 ┌─────────────────────────────────────────────────────────────────┐
 │                     MP DASHBOARD                                │
 │  🗺️ GIS Map │ 📊 Analytics │ 📂 Department View │ 🔍 Search   │
-│  📋 Project Prioritization │ 📞 IVR Complaints │ ✅ Resolved   │
-│  📈 Stats   │ 🧾 AI Insights │ ✅ Resolution Tracking          │
+│  📋 Project Prioritization │ 📈 Development Planner            │
+│  🏆 Proposal Evaluator │ 📞 IVR Complaints │ ✅ Resolved       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
