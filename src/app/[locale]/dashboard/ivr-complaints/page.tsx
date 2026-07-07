@@ -56,6 +56,18 @@ export default function IVRComplaintsPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [lang, setLang] = useState('en');
+  const [showLangs, setShowLangs] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('jansankalp-dashboard-lang') || 'en';
+    setLang(saved);
+  }, []);
+
+  const switchLang = (code: string) => {
+    localStorage.setItem('jansankalp-dashboard-lang', code);
+    window.location.reload();
+  };
 
   useEffect(() => {
     const fetchIVRComplaints = async () => {
@@ -109,6 +121,12 @@ export default function IVRComplaintsPage() {
     return raw;
   };
 
+  const getTranslatedTranscript = (c: IVRComplaint): string => {
+    if (c.allTranslations?.[lang]) return c.allTranslations[lang];
+    if (c.allTranslations?.['en']) return c.allTranslations['en'];
+    return getTranscript(c);
+  };
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       {/* Header */}
@@ -132,6 +150,30 @@ export default function IVRComplaintsPage() {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm" style={{ color: 'var(--text-tertiary)' }}>{filtered.length} complaints</span>
+              <div className="relative">
+                <button onClick={() => setShowLangs(!showLangs)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                  style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                  <Globe className="w-4 h-4" />
+                  {LANG_MAP[lang] || 'English'}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                {showLangs && (
+                  <div className="absolute right-0 top-full mt-2 w-44 rounded-xl overflow-hidden z-50"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                    {Object.entries(LANG_MAP).map(([code, name]) => (
+                      <button key={code} onClick={() => switchLang(code)}
+                        className="w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2"
+                        style={{
+                          background: lang === code ? 'var(--accent-primary)' : 'transparent',
+                          color: lang === code ? 'white' : 'var(--text-secondary)',
+                        }}>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <a href="/ivr"
                 className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)', color: 'white' }}>
@@ -221,7 +263,7 @@ export default function IVRComplaintsPage() {
                       </div>
                       <p className="text-xs truncate max-w-lg" style={{ color: 'var(--text-tertiary)' }}>
                         {(() => {
-                          const text = getTranscript(complaint);
+                          const text = getTranslatedTranscript(complaint);
                           if (text.startsWith('Category:')) {
                             const lines = text.split('\n');
                             const categoryLine = lines.find(l => l.startsWith('Category:'));
@@ -260,7 +302,7 @@ export default function IVRComplaintsPage() {
                             <div className="space-y-3">
                               <div className="rounded-lg p-3" style={{ background: 'var(--bg-tertiary)' }}>
                                 <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-tertiary)' }}>Complaint Details</h4>
-                                <p className="text-sm whitespace-pre-wrap font-mono" style={{ color: 'var(--text-secondary)' }}>{getDisplayTranscript(complaint)}</p>
+                                <p className="text-sm whitespace-pre-wrap font-mono" style={{ color: 'var(--text-secondary)' }}>{getTranslatedTranscript(complaint)}</p>
                                 {complaint.photo_url && (
                                   <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-primary)' }}>
                                     <p className="text-xs mb-2 flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
