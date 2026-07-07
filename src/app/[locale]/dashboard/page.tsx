@@ -5,7 +5,7 @@ import {
   ArrowLeft, Users, Lightbulb, TrendingUp, MapPin,
   RefreshCw, Loader2, Globe, ChevronDown, ChevronRight,
   AlertTriangle, Building2, Clock, FileText, Shield,
-  Search, CheckCircle2, Circle, AlertCircle, Copy, Phone, BarChart3
+  Search, CheckCircle2, Circle, AlertCircle, Copy, Phone, BarChart3, Layers
 } from 'lucide-react';
 import { DemandMap } from '@/components/DemandMap';
 import { StatsCard } from '@/components/StatsCard';
@@ -504,6 +504,12 @@ export default function DashboardPage() {
             style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: 'white' }}>
             <BarChart3 className="w-4 h-4" />
             Project Prioritization
+          </Link>
+          <Link href={`/${lang}/dashboard/planner`}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-all shadow-sm flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white' }}>
+            <Layers className="w-4 h-4" />
+            Development Planner
           </Link>
         </div>
 
