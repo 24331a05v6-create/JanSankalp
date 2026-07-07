@@ -55,6 +55,7 @@ interface EvaluatedProposal extends Proposal {
   proposalScore: number;
   estimatedCitizens: number;
   suggestedBudget: string;
+  budgetReasons: string[];
   whyRanked: string[];
   rank: number;
 }
@@ -91,8 +92,10 @@ const PRIORITY_LEVELS = [
 const BUDGET_MAP = [
   { min: 90, budget: '₹3 Crore' },
   { min: 80, budget: '₹2 Crore' },
-  { min: 70, budget: '₹1 Crore' },
-  { min: 60, budget: '₹50 Lakhs' },
+  { min: 70, budget: '₹1.5 Crore' },
+  { min: 60, budget: '₹1 Crore' },
+  { min: 50, budget: '₹75 Lakhs' },
+  { min: 40, budget: '₹50 Lakhs' },
   { min: 0, budget: '₹25 Lakhs' },
 ];
 
@@ -155,6 +158,7 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     mostHotspots: 'Most hotspot coverage',
     mostUnresolved: 'Most unresolved complaints',
     proposalSaved: 'Proposals saved',
+    budgetReason: 'Budget Rationale',
   },
   hi: {
     title: 'विकास प्रस्ताव मूल्यांकनकर्ता',
@@ -210,6 +214,7 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     mostHotspots: 'सबसे अधिक हॉटस्पॉत कवरेज',
     mostUnresolved: 'सबसे अधिक अनसुलझी शिकायतें',
     proposalSaved: 'प्रस्ताव सहेजे गए',
+    budgetReason: 'बजट कारण',
   },
   ta: {
     title: 'மேம்பாட்டு திட்ட மதிப்பீட்டாளர்',
@@ -265,6 +270,7 @@ const DASHBOARD_TEXT: Record<string, Record<string, string>> = {
     mostHotspots: 'அதிக ஹாட்ஸ்பாட் கவரேஜ்',
     mostUnresolved: 'அதிக தீர்க்கப்படாத புகார்கள்',
     proposalSaved: 'திட்டங்கள் சேமிக்கப்பட்டன',
+    budgetReason: 'பட்ஜெட் காரணம்',
   },
 };
 
@@ -401,6 +407,24 @@ export default function ProposalEvaluatorPage() {
       const estimatedCitizens = locationSet.size * POPULATION_PER_LOCATION;
       const budgetEntry = BUDGET_MAP.find(b => proposalScore >= b.min);
 
+      const budgetReasons: string[] = [];
+      if (proposalScore >= 90) {
+        budgetReasons.push('Highest proposal score in the evaluation');
+        budgetReasons.push('Critical infrastructure need across multiple locations');
+      } else if (proposalScore >= 70) {
+        budgetReasons.push('Strong citizen demand with significant impact');
+        if (hotspotSet.size > 2) budgetReasons.push(`${hotspotSet.size} hotspot clusters require targeted investment`);
+      } else if (proposalScore >= 50) {
+        budgetReasons.push('Moderate demand across complaint indicators');
+        if (unresolved > 0) budgetReasons.push(`${unresolved} unresolved complaints support this allocation`);
+      } else {
+        budgetReasons.push('Lower priority — baseline funding recommended');
+        if (relatedCount > 0) budgetReasons.push(`${relatedCount} related complaints identified`);
+      }
+      if (estimatedCitizens > 5000) budgetReasons.push(`Estimated ${estimatedCitizens.toLocaleString()} citizens will benefit`);
+      if (avgPri >= 7) budgetReasons.push('Critical average priority score');
+      else if (avgPri >= 5) budgetReasons.push('High average priority score');
+
       const whyRanked: string[] = [];
       if (relatedCount > 0) whyRanked.push(`Highest complaint demand: ${relatedCount} related complaints`);
       if (hotspotSet.size > 0) whyRanked.push(`${hotspotSet.size} hotspot location${hotspotSet.size > 1 ? 's' : ''}`);
@@ -422,6 +446,7 @@ export default function ProposalEvaluatorPage() {
         proposalScore: Math.min(proposalScore, 100),
         estimatedCitizens,
         suggestedBudget: budgetEntry?.budget || '₹25 Lakhs',
+        budgetReasons,
         whyRanked,
         rank: 0,
       };
@@ -669,6 +694,22 @@ export default function ProposalEvaluatorPage() {
                             </div>
                           </motion.div>
 
+                          {/* Budget Explanation */}
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.06 + 0.4 }}
+                            className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border-primary)' }}>
+                            <p className="text-xs font-bold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                              <IndianRupee className="w-3 h-3" />
+                              {t.suggestedBudget}: <span style={{ color }}>{proposal.suggestedBudget}</span>
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {proposal.budgetReasons.map((reason, ri) => (
+                                <span key={ri} className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                                  {reason}
+                                </span>
+                              ))}
+                            </div>
+                          </motion.div>
+
                           {/* Actions */}
                           <div className="flex items-center gap-2 mt-3 no-print">
                             <button onClick={() => openEditModal(proposal)} className="text-xs px-3 py-1 rounded-lg" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
@@ -811,7 +852,7 @@ export default function ProposalEvaluatorPage() {
                 <div>
                   <label className="text-xs font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>{t.projectName} *</label>
                   <input value={formName} onChange={e => setFormName(e.target.value)} className="input-field w-full text-sm"
-                    placeholder="e.g., Road Repair, Water Pipeline" />
+                    placeholder="e.g., Upgrade Power Network, Build Water Pipeline, Repair Roads" />
                 </div>
                 <div>
                   <label className="text-xs font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>{t.category}</label>
@@ -924,7 +965,7 @@ function BudgetBarChart({ proposals }: { proposals: EvaluatedProposal[] }) {
   }, []);
   if (!ChartComponents) return <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>;
   const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } = ChartComponents;
-  const budgetToNum = (b: string) => { if (b.includes('3 Crore')) return 300; if (b.includes('2 Crore')) return 200; if (b.includes('1 Crore')) return 100; if (b.includes('50 Lakhs')) return 50; return 25; };
+  const budgetToNum = (b: string) => { if (b.includes('3 Crore')) return 300; if (b.includes('2 Crore')) return 200; if (b.includes('1.5 Crore')) return 150; if (b.includes('1 Crore')) return 100; if (b.includes('75 Lakhs')) return 75; if (b.includes('50 Lakhs')) return 50; return 25; };
   const data = proposals.map(p => ({ name: p.name.length > 10 ? p.name.slice(0, 10) + '…' : p.name, budget: budgetToNum(p.suggestedBudget), color: SECTOR_CONFIG[p.category]?.color || '#64748b' }));
   return (
     <BarChart data={data} margin={{ left: 10, right: 20 }}>
