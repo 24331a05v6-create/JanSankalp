@@ -67,6 +67,7 @@ The result: **critical issues get buried**, **similar complaints duplicate effor
 | 📱 | **Fully Responsive** | Works seamlessly on desktop, tablet, and mobile devices |
 | 🌙 | **Dark/Light Mode** | Theme-aware UI with smooth transitions and localStorage persistence |
 | ⚡ | **Modern UI/UX** | Glass morphism, Framer Motion animations, enterprise-grade design |
+| 📊 | **Project Prioritization** | AI ranks proposed projects against real citizen demand data with explainable reasons |
 | ☁️ | **Cloud Database** | Firebase Firestore with real-time sync and Firebase Storage for audio files |
 
 ---
@@ -101,6 +102,12 @@ The result: **critical issues get buried**, **similar complaints duplicate effor
 | | Resolved/Unresolved Tracking | ✅ |
 | | Search & Filter | ✅ |
 | | IVR Complaints View | ✅ |
+| **Project Prioritization** | AI-Powered Project Ranking | ✅ |
+| | Explainable AI Recommendations | ✅ |
+| | Complaint-to-Project Matching | ✅ |
+| | Hotspot & Impact Analysis | ✅ |
+| | Government Scheme Suggestions | ✅ |
+| | Local Storage Persistence | ✅ |
 | **UI/UX** | Dark Mode | ✅ |
 | | Light Mode | ✅ |
 | | Theme Persistence | ✅ |
@@ -155,6 +162,9 @@ Every complaint is automatically translated to all 12 supported languages using 
 ### 7. Language Detection
 Detects the spoken language from voice transcripts and transliterates Roman-script Indian words to their native script (e.g., "pani" → "पानी").
 
+### 8. AI Project Prioritization
+The `/api/projects/prioritize` endpoint uses Gemini 2.0 Flash to analyze proposed development projects against real citizen demand data. For each project, it matches complaints by category, calculates a 0-100 priority score based on complaint frequency (40%), severity (30%), hotspot density (15%), and affected population (15%). Returns ranked projects with explainable reasons, expected impact, suggested government schemes, and responsible departments — helping MPs decide which projects to fund based on actual demand rather than guesswork.
+
 ---
 
 ## 🛠 Tech Stack
@@ -167,7 +177,7 @@ Detects the spoken language from voice transcripts and transliterates Roman-scri
 | | Tailwind CSS 4 | Utility-first styling |
 | | Framer Motion 12 | Animations and transitions |
 | | Lucide React | Icon library |
-| **Backend** | Next.js API Routes | REST API endpoints (14 routes) |
+| **Backend** | Next.js API Routes | REST API endpoints (15 routes) |
 | | Google Gemini 2.0 Flash | AI analysis, categorization, suggestions |
 | **Database** | Firebase Firestore | Complaints, themes, merged issues storage |
 | | Firebase Storage | Audio file storage with retry logic |
@@ -222,6 +232,7 @@ Detects the spoken language from voice transcripts and transliterates Roman-scri
 ┌─────────────────────────────────────────────────────────────────┐
 │                     MP DASHBOARD                                │
 │  🗺️ GIS Map │ 📊 Analytics │ 📂 Department View │ 🔍 Search   │
+│  📋 Project Prioritization │ 📞 IVR Complaints │ ✅ Resolved   │
 │  📈 Stats   │ 🧾 AI Insights │ ✅ Resolution Tracking          │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -400,6 +411,7 @@ npm start
 | `GET` | `/api/merge-complaints` | List merged issues |
 | `POST` | `/api/ivr` | Submit IVR complaint |
 | `POST` | `/api/resolve-issue` | Mark issue resolved/unresolved |
+| `POST` | `/api/projects/prioritize` | AI-rank projects against complaint data |
 | `POST` | `/api/translate` | Translate text to multiple languages |
 | `POST` | `/api/detect-language` | Detect language + transliterate |
 | `POST` | `/api/analyze` | Trigger AI theme analysis |
@@ -437,6 +449,29 @@ POST /api/submissions
       "estimated_timeline": "2-4 weeks"
     }
   }
+}
+```
+
+### Sample Request — Prioritize Projects
+```json
+POST /api/projects/prioritize
+{
+  "projects": [
+    {
+      "id": "1",
+      "name": "Road repair in Central Delhi",
+      "category": "roads",
+      "cost": 5000000,
+      "area": "Central Delhi"
+    },
+    {
+      "id": "2",
+      "name": "New hospital in South Delhi",
+      "category": "healthcare",
+      "cost": 20000000,
+      "area": "South Delhi"
+    }
+  ]
 }
 ```
 
