@@ -18,14 +18,14 @@ const LABELS: Record<string, string> = {
 };
 
 const COLORS: Record<string, string> = {
-  education: '#3B82F6',
-  healthcare: '#EF4444',
-  roads: '#F59E0B',
-  water: '#06B6D4',
-  sanitation: '#8B5CF6',
-  electricity: '#F97316',
-  employment: '#10B981',
-  other: '#6B7280',
+  education: '#3b82f6',
+  healthcare: '#ef4444',
+  roads: '#f59e0b',
+  water: '#06b6d4',
+  sanitation: '#8b5cf6',
+  electricity: '#f97316',
+  employment: '#10b981',
+  other: '#64748b',
 };
 
 export function CategoryChart({ data }: CategoryChartProps) {
@@ -46,21 +46,21 @@ export function CategoryChart({ data }: CategoryChartProps) {
   }, []);
 
   const chartData = Object.entries(data)
-    .map(([name, value]) => ({ name: LABELS[name] || name, value, color: COLORS[name] || '#6B7280' }))
+    .map(([name, value]) => ({ name: LABELS[name] || name, value, color: COLORS[name] || '#64748b' }))
     .filter(item => item.value > 0)
     .sort((a, b) => b.value - a.value);
 
   if (!ChartComponents) {
     return (
-      <div className="w-full h-60 flex items-center justify-center bg-gray-50 rounded-lg">
-        <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-full h-60 flex items-center justify-center" style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+        <div className="w-6 h-6 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-60 text-gray-400 text-sm">
+      <div className="flex items-center justify-center h-60 text-sm" style={{ color: 'var(--text-tertiary)' }}>
         No data yet
       </div>
     );
@@ -80,13 +80,24 @@ export function CategoryChart({ data }: CategoryChartProps) {
           paddingAngle={3}
           dataKey="value"
           nameKey="name"
+          animationBegin={0}
+          animationDuration={800}
         >
           {chartData.map((entry: any) => (
-            <Cell key={entry.name} fill={entry.color} />
+            <Cell key={entry.name} fill={entry.color} stroke="transparent" />
           ))}
         </Pie>
-        <Tooltip formatter={(value: any) => [`${value} submissions`]} />
-        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
+        <Tooltip
+          contentStyle={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: '12px',
+            boxShadow: 'var(--shadow-md)',
+            fontSize: '13px',
+          }}
+          formatter={(value: any) => [`${value} submissions`]}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', color: 'var(--text-secondary)' }} />
       </PieChart>
     </ResponsiveContainer>
   );

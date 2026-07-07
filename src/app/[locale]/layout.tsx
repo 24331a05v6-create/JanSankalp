@@ -19,7 +19,7 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
         {children}
       </div>
     </NextIntlClientProvider>

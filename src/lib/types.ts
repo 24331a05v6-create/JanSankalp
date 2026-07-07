@@ -33,6 +33,31 @@ export interface Submission {
   urgency_score: number | null;
   priority_score: number | null;
   status: Status;
+  // AI-extracted fields (Capability 1: Understand Input)
+  ai_summary: string | null;
+  ai_entities: {
+    location_mentioned: string | null;
+    issue_type: string | null;
+    department: string | null;
+    severity_keywords: string[];
+    affected_people: string | null;
+  } | null;
+  // AI categorization fields (Capability 2: Auto-Categorize)
+  ai_category: Category | null;
+  ai_subcategory: string | null;
+  ai_category_confidence: number | null;
+  category_override: boolean;
+  // Duplicate detection fields (Capability 3: Merge Duplicates)
+  duplicate_of: string | null;
+  duplicate_count: number;
+  // AI suggestion fields (Capability 6: Generate Suggestions)
+  ai_suggestion: {
+    next_steps: string[];
+    responsible_department: string;
+    relevant_schemes: string[];
+    estimated_timeline: string;
+    required_documents: string[];
+  } | null;
 }
 
 export interface Theme {
@@ -86,6 +111,48 @@ export interface SubmissionInput {
   source?: Source;
   session_id?: string;
 }
+
+// IVR Complaint types
+export type IVRLanguage = 'te' | 'hi' | 'en' | 'ta' | 'kn' | 'ml';
+
+export type IVRQuestionType = 'problem' | 'location' | 'category';
+
+export type IVRCallStep =
+  | 'ringing'
+  | 'connected'
+  | 'welcome'
+  | 'languageSelect'
+  | 'questionPrompt'
+  | 'keypadMenu'
+  | 'categorySelect'
+  | 'uploading'
+  | 'processing'
+  | 'success';
+
+export interface IVRComplaint {
+  complaintId: string;
+  language: IVRLanguage;
+  audioUrl: string;
+  createdAt: string;
+  status: 'Submitted' | 'Processing' | 'Resolved';
+  source: 'IVR';
+  processingStage: 'Waiting for AI' | 'AI Processing' | 'Completed';
+  transcript: string;
+  category: string;
+  priority: string;
+  summary: string;
+  location: string;
+  suggestion: string;
+}
+
+export const IVR_LANGUAGES: { value: IVRLanguage; label: string; nativeLabel: string; shortcut: number }[] = [
+  { value: 'te', label: 'Telugu', nativeLabel: 'తెలుగు', shortcut: 1 },
+  { value: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', shortcut: 2 },
+  { value: 'en', label: 'English', nativeLabel: 'English', shortcut: 3 },
+  { value: 'ta', label: 'Tamil', nativeLabel: 'தமிழ்', shortcut: 4 },
+  { value: 'kn', label: 'Kannada', nativeLabel: 'ಕನ್ನಡ', shortcut: 5 },
+  { value: 'ml', label: 'Malayalam', nativeLabel: 'മലയാളം', shortcut: 6 },
+];
 
 export const CATEGORIES: { value: Category; label: string; icon: string }[] = [
   { value: 'education', label: 'Education', icon: 'graduation-cap' },

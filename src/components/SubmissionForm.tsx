@@ -48,6 +48,7 @@ export function SubmissionForm() {
   const [ocrText, setOcrText] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [detectedLang, setDetectedLang] = useState('en');
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
@@ -66,10 +67,9 @@ export function SubmissionForm() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
     recognition.interimResults = true;
     recognition.continuous = true;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 3;
 
     let finalTranscript = voiceTranscript ? voiceTranscript + ' ' : '';
 
@@ -80,6 +80,16 @@ export function SubmissionForm() {
         const text = result[0].transcript;
         if (result.isFinal) {
           finalTranscript += text + ' ';
+          const resultLang = result[0].lang || result.lang || '';
+          if (resultLang) {
+            const langCode = resultLang.split('-')[0];
+            const langMap: Record<string, string> = {
+              en: 'en', hi: 'hi', ta: 'ta', te: 'te', kn: 'kn',
+              ml: 'ml', mr: 'mr', gu: 'gu', bn: 'bn', or: 'or',
+              pa: 'pa', as: 'as',
+            };
+            if (langMap[langCode]) setDetectedLang(langCode);
+          }
         } else {
           interimTranscript += text;
         }
@@ -97,7 +107,7 @@ export function SubmissionForm() {
     timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
   }, [locale, voiceTranscript]);
 
-  const stopVoiceRecording = useCallback(() => {
+  const stopVoiceRecording = useCallback(async () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
@@ -107,7 +117,23 @@ export function SubmissionForm() {
       timerRef.current = null;
     }
     setIsRecording(false);
-  }, []);
+
+    const rawText = voiceTranscript.trim();
+    if (rawText) {
+      try {
+        const res = await fetch('/api/detect-language', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: rawText }),
+        });
+        const data = await res.json();
+        if (data.text) setVoiceTranscript(data.text);
+        if (data.language) setDetectedLang(data.language);
+      } catch {
+        setDetectedLang(locale);
+      }
+    }
+  }, [voiceTranscript, locale]);
 
   const handlePhotoUpload = async (file: File) => {
     setPhoto(file);
@@ -149,7 +175,7 @@ export function SubmissionForm() {
         voice_transcript: voiceTranscript,
         ocr_text: ocrText,
         category,
-        language: locale,
+        language: detectedLang || locale,
         source: 'web',
         session_id: crypto.randomUUID(),
       };
@@ -199,7 +225,7 @@ export function SubmissionForm() {
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value as Category)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-blue-500 bg-white"
+        className="input w-full px-4 py-3 rounded-xl text-base"
       >
         {CATEGORIES.map((cat) => (
           <option key={cat.value} value={cat.value}>{cats[cat.value] || cat.label}</option>
@@ -248,23 +274,27 @@ export function SubmissionForm() {
         )}
 
         {!isRecording && !voiceTranscript && (
-          <p className="text-sm text-gray-500 mt-3">{ui.hint}</p>
+          <p className="text-sm mt-3" style={{ color: 'var(--text-tertiary)' }}>{ui.hint}</p>
         )}
       </div>
 
       {/* Transcript */}
       {voiceTranscript && (
-        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-          <p className="text-sm text-gray-700 leading-relaxed">{voiceTranscript}</p>
+        <div className="p-4 rounded-xl" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)' }}>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{voiceTranscript}</p>
           <button type="button" onClick={() => setVoiceTranscript('')} className="text-xs text-red-500 hover:text-red-700 mt-2">{ui.clear}</button>
         </div>
       )}
 
       {/* Photo */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">{ui.photo}</label>
+        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>{ui.photo}</label>
         <div
-          className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${photo ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-blue-400'}`}
+          className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors`}
+          style={{
+            borderColor: photo ? '#10b981' : 'var(--border-primary)',
+            background: photo ? 'rgba(16,185,129,0.05)' : 'var(--bg-tertiary)',
+          }}
           onClick={() => !photo && document.getElementById('photo-upload')?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files[0]?.type.startsWith('image/')) handlePhotoUpload(e.dataTransfer.files[0]); }}
@@ -277,25 +307,27 @@ export function SubmissionForm() {
             </div>
           ) : (
             <>
-              <Image className="w-8 h-8 mx-auto text-gray-400 mb-1" />
-              <p className="text-sm text-gray-500">{ui.photoHint}</p>
+              <Image className="w-8 h-8 mx-auto mb-1" style={{ color: 'var(--text-tertiary)' }} />
+              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>{ui.photoHint}</p>
             </>
           )}
         </div>
         {ocrText && (
-          <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs text-blue-800"><strong>OCR:</strong> {ocrText}</p>
+          <div className="mt-2 p-2 rounded-lg" style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}>
+            <p className="text-xs" style={{ color: '#3b82f6' }}><strong>OCR:</strong> {ocrText}</p>
           </div>
         )}
       </div>
 
       {/* Location */}
       <div className="flex items-center gap-2">
-        <button type="button" onClick={getCurrentLocation} className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm">
+        <button type="button" onClick={getCurrentLocation}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors"
+          style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)' }}>
           <MapPin className="w-4 h-4" />{ui.location}
         </button>
         {location && (
-          <span className="flex items-center gap-1 px-3 py-2 bg-green-50 text-green-700 rounded-xl text-sm">
+          <span className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
             <MapPin className="w-3.5 h-3.5" />{location.name}
           </span>
         )}
@@ -303,12 +335,12 @@ export function SubmissionForm() {
 
       {/* Status */}
       {submitStatus === 'success' && (
-        <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800">
+        <div className="flex items-center gap-2 p-4 rounded-xl" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981' }}>
           <CheckCircle className="w-5 h-5 flex-shrink-0" /><span className="text-sm">{ui.success}</span>
         </div>
       )}
       {submitStatus === 'error' && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800">
+        <div className="flex items-center gap-2 p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }}>
           <AlertCircle className="w-5 h-5 flex-shrink-0" /><span className="text-sm">{errorMessage}</span>
         </div>
       )}
@@ -317,7 +349,8 @@ export function SubmissionForm() {
       <button
         type="submit"
         disabled={isSubmitting || (!voiceTranscript && !photo)}
-        className="w-full py-4 px-6 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
+        className="w-full py-4 px-6 font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
+        style={{ background: 'var(--accent-gradient)', color: 'white', boxShadow: '0 4px 16px rgba(59,130,246,0.3)' }}
       >
         {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin" />{ui.submitting}</> : <><Send className="w-5 h-5" />{ui.submit}</>}
       </button>

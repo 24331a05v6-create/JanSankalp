@@ -1,6 +1,6 @@
 'use client';
 
-import { X, AlertTriangle, MapPin, Users, Lightbulb, TrendingUp } from 'lucide-react';
+import { X, AlertTriangle, MapPin, Users, Lightbulb, TrendingUp, FileText, Clock, Building2, Shield } from 'lucide-react';
 
 interface ThemeDetailProps {
   theme: {
@@ -20,65 +20,52 @@ interface ThemeDetailProps {
     category: string;
     location_name: string | null;
     urgency_score: number | null;
+    priority_score: number | null;
     created_at: string;
+    ai_summary: string | null;
+    ai_category: string | null;
+    ai_category_confidence: number | null;
+    ai_entities: {
+      location_mentioned: string | null;
+      issue_type: string | null;
+      department: string | null;
+      severity_keywords: string[];
+      affected_people: string | null;
+    } | null;
+    ai_suggestion: {
+      next_steps: string[];
+      responsible_department: string;
+      relevant_schemes: string[];
+      estimated_timeline: string;
+      required_documents: string[];
+    } | null;
+    allTranslations?: Record<string, string>;
   }>;
+  lang?: string;
   onClose: () => void;
 }
 
-const RECOMMENDED_ACTIONS: Record<string, string[]> = {
-  education: [
-    'Conduct needs assessment survey in the area',
-    'Coordinate with District Education Officer',
-    'Allocate funds for infrastructure upgrade in next budget',
-    'Explore PPP partnerships for school facilities',
-  ],
-  healthcare: [
-    'Deploy mobile health unit for immediate relief',
-    'Coordinate with District Health Officer',
-    'Set up health camp at identified location',
-    'Escalate to State Health Department if critical',
-  ],
-  roads: [
-    'File work order for pothole repair through PWD',
-    'Coordinate with Municipal Corporation',
-    'Allocate funds from MPLAD scheme',
-    'Request state government matching grant',
-  ],
-  water: [
-    'Assess groundwater levels in the area',
-    'Coordinate with Jal Shakti Department',
-    'Install water purification systems if needed',
-    'Plan rainwater harvesting infrastructure',
-  ],
-  sanitation: [
-    'Coordinate with Municipal Sanitation Department',
-    'Organize community cleanliness drives',
-    'Install public toilets at identified locations',
-    'Connect with Swachh Bharat Mission funds',
-  ],
-  electricity: [
-    'Coordinate with State Electricity Board',
-    'Address transformer overload issues',
-    'Explore solar power for underserved areas',
-    'Submit grievance to DISCOM if needed',
-  ],
-  employment: [
-    'Organize skill development camps',
-    'Connect with District Employment Office',
-    'Promote MGNREGA implementation',
-    'Facilitate connections with local industries',
-  ],
-  other: [
-    'Gather more information from constituents',
-    'Coordinate with relevant department',
-    'Include in next constituency development meeting',
-    'Track and follow up within 30 days',
-  ],
-};
+function getTranslated(sub: { ai_summary?: string | null; text_input?: string | null; voice_transcript?: string | null; allTranslations?: Record<string, string> }, lang: string): string {
+  if (sub.allTranslations && sub.allTranslations[lang]) return sub.allTranslations[lang];
+  if (sub.allTranslations && sub.allTranslations['en']) return sub.allTranslations['en'];
+  return sub.ai_summary || sub.text_input || sub.voice_transcript || '';
+}
 
-export function ThemeDetailModal({ theme, submissions, onClose }: ThemeDetailProps) {
+export function ThemeDetailModal({ theme, submissions, lang = 'en', onClose }: ThemeDetailProps) {
   const urgency = theme.avg_urgency || 3;
-  const actions = RECOMMENDED_ACTIONS[theme.category || 'other'] || RECOMMENDED_ACTIONS.other;
+
+  // Merge AI suggestions from submissions
+  const allSuggestions = submissions
+    .filter(s => s.ai_suggestion)
+    .map(s => s.ai_suggestion!);
+
+  const mergedSuggestions = {
+    next_steps: [...new Set(allSuggestions.flatMap(s => s.next_steps))].slice(0, 5),
+    responsible_department: allSuggestions[0]?.responsible_department || 'Relevant Government Department',
+    relevant_schemes: [...new Set(allSuggestions.flatMap(s => s.relevant_schemes))].slice(0, 3),
+    estimated_timeline: allSuggestions[0]?.estimated_timeline || '2-4 weeks',
+    required_documents: [...new Set(allSuggestions.flatMap(s => s.required_documents))].slice(0, 4),
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -121,12 +108,12 @@ export function ThemeDetailModal({ theme, submissions, onClose }: ThemeDetailPro
             <div className="bg-blue-50 rounded-xl p-3 text-center">
               <Users className="w-5 h-5 text-blue-600 mx-auto mb-1" />
               <div className="text-lg font-bold text-blue-700">{theme.submission_count}</div>
-              <div className="text-xs text-blue-600">Submissions</div>
+              <div className="text-xs text-blue-600">People Reported</div>
             </div>
             <div className="bg-orange-50 rounded-xl p-3 text-center">
               <AlertTriangle className="w-5 h-5 text-orange-600 mx-auto mb-1" />
               <div className="text-lg font-bold text-orange-700">{urgency.toFixed(1)}</div>
-              <div className="text-xs text-orange-600">Avg Urgency</div>
+              <div className="text-xs text-orange-600">Urgency Level</div>
             </div>
             <div className="bg-green-50 rounded-xl p-3 text-center">
               <TrendingUp className="w-5 h-5 text-green-600 mx-auto mb-1" />
@@ -138,37 +125,132 @@ export function ThemeDetailModal({ theme, submissions, onClose }: ThemeDetailPro
           <div>
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              Recent Submissions
+              Citizen Complaints ({submissions.length} people reported)
             </h3>
             <div className="space-y-2">
-              {submissions.slice(0, 5).map((sub) => (
-                <div key={sub.id} className="bg-white border border-gray-200 rounded-lg p-3">
-                  <p className="text-sm text-gray-800">
-                    {sub.text_input || sub.voice_transcript || '(Voice submission)'}
-                  </p>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    <span>{sub.location_name || 'No location'}</span>
-                    <span>•</span>
-                    <span>{new Date(sub.created_at).toLocaleDateString()}</span>
+              {submissions.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No individual complaints loaded</p>
+              ) : (
+                submissions.map((sub, idx) => (
+                  <div key={sub.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-bold text-gray-400 mt-0.5">#{idx + 1}</span>
+                      <p className="text-sm text-gray-800 flex-1">
+                        {getTranslated(sub, lang) || '(Voice submission)'}
+                      </p>
+                    </div>
+                    {sub.ai_entities && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {sub.ai_entities.issue_type && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                            {sub.ai_entities.issue_type.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                        {sub.ai_entities.department && (
+                          <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                            {sub.ai_entities.department.split('/')[0].trim()}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {sub.location_name || 'No location'}
+                      </span>
+                      <span>•</span>
+                      <span>{new Date(sub.created_at).toLocaleDateString()}</span>
+                      {sub.priority_score && (
+                        <>
+                          <span>•</span>
+                          <span className={`font-medium ${
+                            sub.priority_score >= 7 ? 'text-red-600' :
+                            sub.priority_score >= 4 ? 'text-orange-600' :
+                            'text-green-600'
+                          }`}>
+                            Priority: {sub.priority_score.toFixed(1)}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          <div className="bg-amber-50 rounded-xl p-4">
-            <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+          {/* AI-Generated Suggestions */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+            <h3 className="font-semibold text-amber-800 mb-4 flex items-center gap-2">
               <Lightbulb className="w-4 h-4" />
-              Recommended Actions
+              AI-Generated Action Plan
             </h3>
-            <ul className="space-y-2">
-              {actions.map((action, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
-                  <span className="font-bold text-amber-600">{i + 1}.</span>
-                  {action}
-                </li>
-              ))}
-            </ul>
+
+            <div className="space-y-4">
+              {/* Responsible Department */}
+              <div className="flex items-start gap-3">
+                <Building2 className="w-4 h-4 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Responsible Department</p>
+                  <p className="text-sm text-amber-900 font-medium">{mergedSuggestions.responsible_department}</p>
+                </div>
+              </div>
+
+              {/* Next Steps */}
+              {mergedSuggestions.next_steps.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <Shield className="w-4 h-4 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Recommended Actions</p>
+                    <ul className="mt-1 space-y-1">
+                      {mergedSuggestions.next_steps.map((step, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
+                          <span className="font-bold text-amber-600">{i + 1}.</span>
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Relevant Schemes */}
+              {mergedSuggestions.relevant_schemes.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <FileText className="w-4 h-4 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Relevant Government Schemes</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {mergedSuggestions.relevant_schemes.map((scheme, i) => (
+                        <span key={i} className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                          {scheme}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline & Documents */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-4 h-4 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Expected Timeline</p>
+                    <p className="text-sm text-amber-900 font-medium">{mergedSuggestions.estimated_timeline}</p>
+                  </div>
+                </div>
+                {mergedSuggestions.required_documents.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-4 h-4 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Required Documents</p>
+                      <p className="text-sm text-amber-900">{mergedSuggestions.required_documents.join(', ')}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

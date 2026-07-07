@@ -46,7 +46,7 @@ export function ThemeCard({ theme, onClick }: ThemeCardProps) {
         <div className="flex items-center gap-1.5">
           <BarChart3 className="w-4 h-4 text-blue-500" />
           <span className="text-sm font-medium text-gray-700">{theme.submission_count}</span>
-          <span className="text-xs text-gray-500">submissions</span>
+          <span className="text-xs text-gray-500">people reported</span>
         </div>
 
         <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${urgencyColor}`}>
