@@ -81,13 +81,10 @@ export default function IVRComplaintsPage() {
           const text = s.text_input || s.voice_transcript || '';
           if (!text || text.trim().length === 0) return false;
           // Remove complaints that are just "Audio recorded" placeholders
-          if (text === 'Audio recorded' || text === 'Audio recorded - no speech detected') return false;
-          if (text.startsWith('Category:') && text.includes('[PROBLEM]:')) {
-            const lines = text.split('\n');
-            const problemLine = lines.find((l: string) => l.startsWith('[PROBLEM]:'));
-            const problem = problemLine?.replace('[PROBLEM]:', '').trim() || '';
-            if (problem === 'Audio recorded' || problem === 'Audio recorded - no speech detected') return false;
-          }
+          if (text.toLowerCase().includes('audio recorded')) return false;
+          // Also check if all meaningful fields are just "[Audio recorded]"
+          const cleaned = text.replace(/\[PROBLEM\]:|\[LOCATION\]:|\[DETAILS\]:/g, '').trim();
+          if (cleaned === '[Audio recorded]' || cleaned === '[Audio recorded][Audio recorded]') return false;
           return true;
         });
         setComplaints(ivrOnly);

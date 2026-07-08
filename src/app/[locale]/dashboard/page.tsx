@@ -302,7 +302,15 @@ export default function DashboardPage() {
       const mergedData = await mergedRes.json();
       const subData = await subRes.json();
       setMergedIssues(mergedData.merged_issues || []);
-      setSubmissions(subData.submissions || []);
+      // Filter out audio-only IVR complaints (no speech-to-text)
+      const allSubs = (subData.submissions || []).filter((s: any) => {
+        if (s.source !== 'ivr') return true;
+        const text = s.text_input || s.voice_transcript || '';
+        if (!text || text.trim().length === 0) return false;
+        if (text.toLowerCase().includes('audio recorded')) return false;
+        return true;
+      });
+      setSubmissions(allSubs);
       setExpandedDepts(new Set(Object.keys(CATEGORY_META)));
     } catch {
       setError('Failed to load data');
