@@ -15,6 +15,8 @@
 
 **Bridging the gap between citizens and governance through AI, voice, and multilingual access.**
 
+🚀 **[Live Demo →](https://jan-sankalp.vercel.app)**
+
 [Features](#-key-highlights) · [Tech Stack](#-tech-stack) · [AI Features](#-ai-features) · [API Docs](#-api-endpoints) · [Setup](#-installation)
 
 </div>
@@ -360,6 +362,17 @@ JanSankalp/
 
 ---
 
+## 🎥 Demo
+
+| | Link |
+|---|---|
+| 🎬 **Demo Video** | [Add your demo video link here](#) |
+| 🚀 **Live App** | [jan-sankalp.vercel.app](https://jan-sankalp.vercel.app) |
+
+> **Note:** Replace `#` in the Demo Video row with your actual video URL (YouTube, Google Drive, or any video hosting platform).
+
+---
+
 ## 📸 Screenshots
 
 | Home | IVR Phone | Dashboard |
@@ -382,7 +395,7 @@ JanSankalp/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/JanSankalp.git
+git clone https://github.com/24331a05v6-create/JanSankalp.git
 cd JanSankalp
 ```
 
@@ -554,7 +567,7 @@ POST /api/projects/prioritize
 - **Client-Side OCR** — Tesseract.js runs in browser, no server load
 - **Lazy Charts** — Recharts loaded dynamically to reduce initial bundle
 - **Static Pages** — Pre-rendered at build time where possible
-- **30-Second Auto-Refresh** — Dashboard data refreshes automatically
+- **Manual Refresh** — Dashboard refreshes on page load or manual click
 
 ---
 
