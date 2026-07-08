@@ -75,7 +75,21 @@ export default function IVRComplaintsPage() {
         const res = await fetch('/api/submissions?limit=1000');
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
-        const ivrOnly = (data.submissions || []).filter((s: any) => s.source === 'ivr');
+        const ivrOnly = (data.submissions || []).filter((s: any) => {
+          if (s.source !== 'ivr') return false;
+          // Filter out raw audio-only complaints (no speech-to-text conversion)
+          const text = s.text_input || s.voice_transcript || '';
+          if (!text || text.trim().length === 0) return false;
+          // Remove complaints that are just "Audio recorded" placeholders
+          if (text === 'Audio recorded' || text === 'Audio recorded - no speech detected') return false;
+          if (text.startsWith('Category:') && text.includes('[PROBLEM]:')) {
+            const lines = text.split('\n');
+            const problemLine = lines.find((l: string) => l.startsWith('[PROBLEM]:'));
+            const problem = problemLine?.replace('[PROBLEM]:', '').trim() || '';
+            if (problem === 'Audio recorded' || problem === 'Audio recorded - no speech detected') return false;
+          }
+          return true;
+        });
         setComplaints(ivrOnly);
       } catch (err) {
         setError('Failed to load IVR complaints');
@@ -145,7 +159,7 @@ export default function IVRComplaintsPage() {
               <div className="h-5 w-px" style={{ background: 'var(--border-primary)' }} />
               <div className="flex items-center gap-2">
                 <Phone className="w-5 h-5" style={{ color: '#f59e0b' }} />
-                <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>IVR Complaints</h1>
+                <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>IVR Complaints (Text)</h1>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -221,8 +235,8 @@ export default function IVRComplaintsPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <Phone className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
-            <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>No IVR complaints found</p>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>Try adjusting your filters or submit a new complaint</p>
+            <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>No IVR complaints with text transcripts</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>Audio-only recordings are filtered out. Only IVR complaints with speech-to-text conversion are shown.</p>
             <a href="/ivr" className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               style={{ background: '#f59e0b', color: 'white' }}>
               <Phone className="w-4 h-4" /> Submit IVR Complaint
