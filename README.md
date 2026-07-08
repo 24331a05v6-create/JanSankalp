@@ -366,7 +366,7 @@ JanSankalp/
 
 | | Link |
 |---|---|
-| 🎬 **Demo Video** | [Add your demo video link here](#) |
+| 🎬 **Demo Video** | [Watch Demo Video](https://drive.google.com/file/d/1IlG3RwTifMsymjYKbfVQknr2U31ZE8qB/view?usp=sharing) |
 | 🚀 **Live App** | [jan-sankalp.vercel.app](https://jan-sankalp.vercel.app) |
 
 > **Note:** Replace `#` in the Demo Video row with your actual video URL (YouTube, Google Drive, or any video hosting platform).
