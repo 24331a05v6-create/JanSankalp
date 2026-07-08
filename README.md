@@ -15,7 +15,7 @@
 
 **Bridging the gap between citizens and governance through AI, voice, and multilingual access.**
 
-🚀 **[Live Demo →](https://jan-sankalp.vercel.app)**
+🚀 **[Live Demo →](https://jan-sankalp.vercel.app)** · 🎬 **[Watch Video →](https://drive.google.com/file/d/1IlG3RwTifMsymjYKbfVQknr2U31ZE8qB/view?usp=sharing)**
 
 [Features](#-key-highlights) · [Tech Stack](#-tech-stack) · [AI Features](#-ai-features) · [API Docs](#-api-endpoints) · [Setup](#-installation)
 
